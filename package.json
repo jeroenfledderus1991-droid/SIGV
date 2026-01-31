@@ -1,0 +1,10 @@
+{
+  "name": "template-react-root",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently \"npm --prefix client run dev\" \"npm --prefix server run dev\" \"dotnet run --project dotnet/TemplateApi\""
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

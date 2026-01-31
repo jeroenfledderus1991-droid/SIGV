@@ -1,0 +1,314 @@
+/* React-specific helpers */
+
+.app-grid {
+  display: grid;
+  gap: 20px;
+}
+
+.panel-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
+
+.inline-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.inline-form .form-control {
+  min-width: 180px;
+}
+
+.table-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent-color) 10%, var(--bg-secondary));
+  color: var(--accent-color);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(17, 24, 39, 0.45);
+  display: grid;
+  place-items: center;
+  z-index: 2000;
+  padding: 20px;
+}
+
+.modal-card {
+  width: min(520px, 100%);
+  background: var(--bg-secondary);
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-lg);
+  padding: 20px;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.modal-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--accent-color);
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.role-matrix-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border-color);
+  background: var(--bg-tertiary);
+}
+
+.role-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 240px;
+}
+
+.role-search input {
+  width: 100%;
+}
+
+.role-pagination {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.tab-row {
+  display: flex;
+  gap: 8px;
+  border-bottom: 2px solid var(--border-color);
+  margin-bottom: 20px;
+}
+
+.tab-button {
+  padding: 10px 18px;
+  border: none;
+  background: var(--bg-secondary);
+  color: var(--accent-color);
+  border-top-left-radius: 8px;
+  border-top-right-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: transform 0.2s ease, background 0.2s ease;
+}
+
+.tab-button.active {
+  background: var(--accent-color);
+  color: var(--accent-text-color);
+  box-shadow: var(--shadow-sm);
+}
+
+.ff-tab-bar {
+  display: flex;
+  gap: 6px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  margin-bottom: 0;
+}
+
+.ff-tab {
+  padding: 10px 18px;
+  border: 1px solid #ccd9d1;
+  background: linear-gradient(#f8fcfa, #eef6f0);
+  color: #355743;
+  border-radius: 10px 10px 0 0;
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 600;
+  position: relative;
+  top: 1px;
+  transition: 0.2s;
+  cursor: pointer;
+}
+
+.ff-tab.active {
+  background: #ffffff;
+  border-bottom: 1px solid #ffffff;
+  box-shadow: 0 -2px 6px rgba(0, 0, 0, 0.04);
+}
+
+.ff-panel {
+  background: #ffffff;
+  border: 1px solid #ccd9d1;
+  padding: 24px 26px;
+  border-radius: 0 14px 14px 14px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.ff-tab-panel {
+  animation: fadeIn 0.18s ease-in;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.ff-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.ff-table th {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: #486454;
+  font-weight: 600;
+  padding: 8px 6px;
+  border-bottom: 1px solid #e3ece6;
+  background: #f5faf7;
+}
+
+.ff-table td {
+  padding: 10px 6px;
+  font-size: 13px;
+  border-top: 1px solid #eef3ef;
+  vertical-align: middle;
+}
+
+.ff-table tbody tr:hover {
+  background: #f7fbf9;
+}
+
+.ff-switch {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 22px;
+}
+
+.ff-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.ff-slider {
+  position: absolute;
+  cursor: pointer;
+  inset: 0;
+  background: #c9d6ce;
+  border-radius: 30px;
+  transition: 0.25s;
+}
+
+.ff-slider::before {
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 18px;
+  left: 2px;
+  top: 2px;
+  background: #ffffff;
+  border-radius: 50%;
+  transition: 0.25s;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+}
+
+.ff-switch input:checked + .ff-slider {
+  background: #2d8f55;
+}
+
+.ff-switch input:checked + .ff-slider::before {
+  transform: translateX(22px);
+}
+
+.ff-select {
+  width: 100%;
+  padding: 6px 8px;
+  font-size: 13px;
+  border: 1px solid #cfdad3;
+  border-radius: 6px;
+  background: #fdfefd;
+}
+
+.ff-select:focus {
+  outline: 2px solid #2d8f55;
+  outline-offset: 1px;
+}
+
+.ff-input {
+  width: 100%;
+  padding: 6px 10px;
+  font-size: 13px;
+  border: 1px solid #d4dfd8;
+  border-radius: 6px;
+  background: #fdfefd;
+  color: #2d4d3a;
+}
+
+.ff-input:focus {
+  outline: 2px solid #2d8f55;
+  outline-offset: 1px;
+  border-color: #2d8f55;
+}
+
+.ff-input::placeholder {
+  color: #9bb0a3;
+  font-style: italic;
+}
+
+.sidebar.variant-accent-solid {
+  background: var(--sidebar-accent-start);
+  color: var(--accent-text-color);
+  --sidebar-text: var(--accent-text-color);
+  --sidebar-text-muted: color-mix(in srgb, var(--accent-text-color) 85%, transparent);
+  --sidebar-hover: color-mix(in srgb, var(--accent-text-color) 12%, transparent);
+  --sidebar-active: color-mix(in srgb, var(--accent-text-color) 20%, transparent);
+}
+
+.sidebar.variant-accent-gradient {
+  background: linear-gradient(180deg, var(--sidebar-accent-start) 0%, var(--sidebar-accent-end) 100%);
+  color: var(--accent-text-color);
+  --sidebar-text: var(--accent-text-color);
+  --sidebar-text-muted: color-mix(in srgb, var(--accent-text-color) 85%, transparent);
+  --sidebar-hover: color-mix(in srgb, var(--accent-text-color) 12%, transparent);
+  --sidebar-active: color-mix(in srgb, var(--accent-text-color) 20%, transparent);
+}
+
+.sidebar.variant-white {
+  background: #ffffff;
+  color: var(--accent-color);
+  --sidebar-text: var(--accent-color);
+  --sidebar-text-muted: var(--accent-color);
+  --sidebar-hover: var(--accent-tint, #f2f4f7);
+  --sidebar-active: var(--accent-tint, #e9eef2);
+}

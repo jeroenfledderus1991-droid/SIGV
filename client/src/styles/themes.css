@@ -1,0 +1,366 @@
+/* ===== THEMA ONDERSTEUNING ===== */
+/* Dark en Light thema variabelen en stijlen */
+
+/* CSS Custom Properties voor thema's */
+:root {
+    /* Light Theme (default) */
+    --bg-primary: #f8f9fa;
+    --bg-secondary: #ffffff;
+    --bg-tertiary: #f1f3f4;
+    --text-primary: #181c22; /* Zeer donker voor maximale leesbaarheid */
+    --text-secondary: #3d4852; /* Donkergrijs, goed leesbaar op licht */
+    --text-muted: #6c757d; /* Iets donkerder dan standaard muted */
+    --border-color: #d1d5db;
+    --border-color-light: #e5e7eb;
+    --accent-color: #2c5f41;
+    --accent-color-rgb: 44, 95, 65;
+    --accent-hover: #1a3c28;
+    --accent-text-color: #ffffff;
+    --success-color: #198754;
+    --warning-color: #fd7e14;
+    --danger-color: #dc3545;
+    --info-color: #0dcaf0;
+    
+    /* Sidebar specifiek */
+    --sidebar-bg: linear-gradient(135deg, #2c5f41 0%, #1e4530 100%);
+    --sidebar-text: #ffffff;
+    --sidebar-text-muted: rgba(255, 255, 255, 0.85);
+    --sidebar-hover: rgba(255, 255, 255, 0.1);
+    --sidebar-active: rgba(255, 255, 255, 0.2);
+    --sidebar-accent-start: var(--accent-color);
+    --sidebar-accent-end: var(--sidebar-accent-second, var(--accent-color));
+    
+    /* Shadow en effects */
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
+    --shadow-md: 0 3px 6px rgba(0,0,0,0.15), 0 2px 4px rgba(0,0,0,0.12);
+    --shadow-lg: 0 10px 20px rgba(0,0,0,0.15), 0 3px 6px rgba(0,0,0,0.10);
+    --header-bg: var(--bg-secondary);
+    --header-border: var(--border-color);
+}
+
+/* Dark Theme */
+/* Donker thema: identiek aan auto-dark voor volledige consistentie */
+[data-theme="dark"], .theme-dark {
+    --bg-primary: color-mix(in srgb, #0e1112 90%, var(--accent-color));
+    --bg-secondary: color-mix(in srgb, #1a1f22 88%, var(--accent-color));
+    --bg-tertiary: color-mix(in srgb, #262c31 86%, var(--accent-color));
+    --text-primary: #f8f9fa;
+    --text-secondary: #ced4da;
+    --text-muted: #7b8791;
+    --border-color: color-mix(in srgb, #3a4249 85%, var(--accent-color));
+    --border-color-light: color-mix(in srgb, #2f363c 88%, var(--accent-color));
+    --success-color: #22c55e;
+    --warning-color: #f59e0b;
+    --danger-color: #ef4444;
+    --info-color: #06b6d4;
+    --sidebar-bg: linear-gradient(135deg,
+        color-mix(in srgb, #0b1114 86%, var(--accent-color)) 0%,
+        color-mix(in srgb, #0d1417 90%, var(--accent-color)) 100%);
+    --sidebar-accent-start: color-mix(in srgb, #0b1114 68%, var(--accent-color));
+    --sidebar-accent-end: color-mix(in srgb, #07090b 78%, var(--accent-color));
+    --sidebar-text: #f8fafc;
+    --sidebar-text-muted: rgba(248, 250, 252, 0.85);
+    --sidebar-hover: rgba(241, 245, 249, 0.1);
+    --sidebar-active: rgba(241, 245, 249, 0.2);
+    --header-bg: color-mix(in srgb, #14181c 85%, var(--accent-color));
+    --header-border: color-mix(in srgb, #283038 80%, var(--accent-color));
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.4), 0 1px 2px rgba(0,0,0,0.3);
+    --shadow-md: 0 3px 6px rgba(0,0,0,0.5), 0 2px 4px rgba(0,0,0,0.4);
+    --shadow-lg: 0 10px 20px rgba(0,0,0,0.6), 0 3px 6px rgba(0,0,0,0.5);
+}
+
+/* Auto theme: respecteer systeem voorkeur */
+@media (prefers-color-scheme: dark) {
+    [data-theme="auto"] {
+        --bg-primary: color-mix(in srgb, #0e1112 90%, var(--accent-color));
+        --bg-secondary: color-mix(in srgb, #1a1f22 88%, var(--accent-color));
+        --bg-tertiary: color-mix(in srgb, #262c31 86%, var(--accent-color));
+        --text-primary: #f8f9fa;
+        --text-secondary: #ced4da;
+        --text-muted: #7b8791;
+        --border-color: color-mix(in srgb, #3a4249 85%, var(--accent-color));
+        --border-color-light: color-mix(in srgb, #2f363c 88%, var(--accent-color));
+        --success-color: #22c55e;
+        --warning-color: #f59e0b;
+        --danger-color: #ef4444;
+        --info-color: #06b6d4;
+        
+        --sidebar-bg: linear-gradient(135deg,
+            color-mix(in srgb, #0b1114 86%, var(--accent-color)) 0%,
+            color-mix(in srgb, #0d1417 90%, var(--accent-color)) 100%);
+        --sidebar-accent-start: color-mix(in srgb, #0b1114 68%, var(--accent-color));
+        --sidebar-accent-end: color-mix(in srgb, #07090b 78%, var(--accent-color));
+        --sidebar-text: #f8fafc;
+        --sidebar-text-muted: rgba(248, 250, 252, 0.85);
+        --sidebar-hover: rgba(241, 245, 249, 0.1);
+        --sidebar-active: rgba(241, 245, 249, 0.2);
+        --header-bg: color-mix(in srgb, #14181c 85%, var(--accent-color));
+        --header-border: color-mix(in srgb, #283038 80%, var(--accent-color));
+        
+        --shadow-sm: 0 1px 3px rgba(0,0,0,0.4), 0 1px 2px rgba(0,0,0,0.3);
+        --shadow-md: 0 3px 6px rgba(0,0,0,0.5), 0 2px 4px rgba(0,0,0,0.4);
+        --shadow-lg: 0 10px 20px rgba(0,0,0,0.6), 0 3px 6px rgba(0,0,0,0.5);
+    }
+}
+
+/* ===== DISPLAY MODE ONDERSTEUNING ===== */
+/* Full display mode is now the default */
+
+:root {
+    --font-size-base: 1rem;
+    --font-size-sm: 0.875rem;
+    --font-size-lg: 1.125rem;
+    --padding-sm: 0.5rem;
+    --padding-md: 0.75rem;
+    --padding-lg: 1rem;
+    --margin-sm: 0.5rem;
+    --margin-md: 0.75rem;
+    --margin-lg: 1rem;
+    --line-height: 1.6;
+    --border-radius: 6px;
+    --element-height: 40px;
+    --button-height: 40px;
+    --input-height: 40px;
+}
+
+/* ===== BASIS ELEMENTEN MET THEMA ONDERSTEUNING ===== */
+
+body {
+    background-color: var(--bg-primary) !important;
+    color: var(--text-primary);
+    font-size: var(--font-size-base);
+    line-height: var(--line-height);
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Headings met thema kleuren */
+h1, h2, h3, h4, h5, h6 {
+    color: var(--accent-color);
+    margin-bottom: var(--margin-md);
+}
+
+/* Links met thema kleuren */
+a {
+    color: var(--accent-color);
+    transition: color 0.2s ease;
+}
+
+a:hover {
+    color: var(--accent-hover);
+}
+
+/* Cards en containers */
+.card, .settings-card, .content-card {
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-sm);
+    transition: background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.card:hover, .settings-card:hover {
+    box-shadow: var(--shadow-md);
+}
+
+/* Borders */
+.border {
+    border-color: var(--border-color) !important;
+}
+
+.border-light {
+    border-color: var(--border-color-light) !important;
+}
+
+/* Text colors */
+.text-muted {
+    color: var(--text-muted) !important;
+}
+
+.text-secondary {
+    color: var(--text-secondary) !important;
+}
+
+/* Buttons met thema ondersteuning */
+.btn-primary {
+    background-color: var(--accent-color);
+    border-color: var(--accent-color);
+    color: white;
+    height: var(--button-height);
+    padding: 0 var(--padding-lg);
+    font-size: var(--font-size-base);
+    border-radius: var(--border-radius);
+}
+
+.btn-primary:hover {
+    background-color: var(--accent-hover);
+    border-color: var(--accent-hover);
+}
+
+/* Forms met thema ondersteuning */
+.form-control, .form-select {
+    background-color: var(--bg-secondary);
+    border-color: var(--border-color);
+    color: var(--text-primary);
+    height: var(--input-height);
+    font-size: var(--font-size-base);
+    border-radius: var(--border-radius);
+    padding: 0 var(--padding-md);
+    transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: var(--accent-color);
+    box-shadow: 0 0 0 0.2rem rgba(44, 95, 65, 0.25);
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
+}
+
+.form-control::placeholder {
+    color: var(--text-muted);
+}
+
+/* Tables met thema ondersteuning */
+.table {
+    color: var(--text-primary);
+    background-color: var(--bg-secondary);
+}
+
+.table th {
+    background-color: var(--bg-tertiary);
+    border-color: var(--border-color);
+    color: var(--text-primary);
+    font-size: var(--font-size-sm);
+    padding: var(--padding-sm) var(--padding-md);
+}
+
+.table td {
+    border-color: var(--border-color);
+    font-size: var(--font-size-base);
+    padding: var(--padding-sm) var(--padding-md);
+}
+
+.table-striped tbody tr:nth-of-type(odd) {
+    background-color: var(--bg-tertiary);
+}
+
+/* Modals met thema ondersteuning */
+.modal-content {
+    background-color: var(--bg-secondary);
+    border-color: var(--border-color);
+    color: var(--text-primary);
+}
+
+.modal-header {
+    border-bottom-color: var(--border-color);
+}
+
+.modal-footer {
+    border-top-color: var(--border-color);
+}
+
+/* Alerts met thema ondersteuning */
+.alert {
+    border-radius: var(--border-radius);
+    padding: var(--padding-md);
+    font-size: var(--font-size-base);
+}
+
+.alert-success {
+    background-color: color-mix(in srgb, var(--success-color) 15%, var(--bg-secondary));
+    border-color: var(--success-color);
+    color: var(--success-color);
+}
+
+.alert-warning {
+    background-color: color-mix(in srgb, var(--warning-color) 15%, var(--bg-secondary));
+    border-color: var(--warning-color);
+    color: var(--warning-color);
+}
+
+.alert-danger {
+    background-color: color-mix(in srgb, var(--danger-color) 15%, var(--bg-secondary));
+    border-color: var(--danger-color);
+    color: var(--danger-color);
+}
+
+.alert-info {
+    background-color: color-mix(in srgb, var(--info-color) 15%, var(--bg-secondary));
+    border-color: var(--info-color);
+    color: var(--info-color);
+}
+
+/* ===== TRANSITIONS VOOR SMOOTH THEME SWITCHING ===== */
+
+* {
+    transition: background-color 0.3s ease, 
+                color 0.3s ease, 
+                border-color 0.3s ease,
+                box-shadow 0.3s ease;
+}
+
+/* Uitzondering voor elementen die geen transition moeten hebben */
+.no-transition,
+.no-transition * {
+    transition: none !important;
+}
+
+/* ===== JAVASCRIPT HELPERS ===== */
+
+/* Classes voor immediate theme application */
+.theme-light { 
+    color-scheme: light;
+}
+
+.theme-dark { 
+    color-scheme: dark;
+}
+
+.theme-auto { 
+    color-scheme: light dark;
+}
+
+/* ===== HEADER EN MAIN CONTENT THEMING ===== */
+
+.top-header {
+    background-color: var(--bg-secondary) !important;
+    color: var(--text-primary) !important;
+    border-bottom: 1px solid var(--border-color) !important;
+}
+
+.main-content {
+    background-color: var(--bg-primary) !important;
+}
+
+.content-area {
+    background-color: var(--bg-primary) !important;
+}
+
+.page-container {
+    background-color: transparent !important;
+}
+
+/* ===== SCROLLBAR THEMING ===== */
+
+/* Webkit scrollbars (Chrome, Safari, Edge) */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--bg-tertiary);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--border-color);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--text-muted);
+}
+
+/* Firefox scrollbars */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-color) var(--bg-tertiary);
+}
