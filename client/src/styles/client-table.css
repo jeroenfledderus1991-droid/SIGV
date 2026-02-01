@@ -264,6 +264,8 @@
 
 .table-responsive {
     overflow-x: auto;
+    --table-zoom: 1; /* Responsive scaling factor for table size */
+    --table-min-scroll-width: 960px; /* When to allow horizontal scrolling */
 }
 
 .standard-table {
@@ -278,17 +280,17 @@
 }
 
 body .standard-table th {
-    padding: 10px 16px !important;
+    padding: calc(10px * var(--table-zoom)) calc(16px * var(--table-zoom)) !important;
     text-align: left;
     font-weight: 600;
-    font-size: 0.8125rem;
+    font-size: calc(0.8125rem * var(--table-zoom));
     color: var(--text-secondary);
     text-transform: uppercase;
     letter-spacing: 0.05em;
     white-space: nowrap;
     line-height: 1.5;
     vertical-align: middle !important;
-    height: 44px;
+    height: calc(44px * var(--table-zoom));
     overflow: visible; /* Changed from hidden to allow dropdown overflow */
     text-overflow: ellipsis;
     position: relative; /* For filter icon positioning */
@@ -308,6 +310,7 @@ body .standard-table th {
 .standard-table .th-content {
     display: flex;
     align-items: center;
+    width: 100%;
 }
 
 .standard-table .th-label {
@@ -316,6 +319,21 @@ body .standard-table th {
     justify-content: space-between;
     gap: 8px;
     width: 100%;
+    min-width: 0;
+}
+
+.standard-table .th-text {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.standard-table .th-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
 }
 
 /* Column Filter Icon */
@@ -528,8 +546,8 @@ body .standard-table th {
 body .standard-table tbody tr {
     border-bottom: 1px solid var(--border-color);
     transition: background-color 0.15s ease;
-    height: 50px !important;
-    max-height: 50px !important; /* Force maximum height */
+    height: calc(50px * var(--table-zoom)) !important;
+    max-height: calc(50px * var(--table-zoom)) !important; /* Force maximum height */
 }
 
 body .standard-table tbody tr:hover {
@@ -541,8 +559,8 @@ body .standard-table tbody tr:last-child {
 }
 
 body .standard-table td {
-    padding: 10px 16px !important;
-    font-size: 0.875rem;
+    padding: calc(10px * var(--table-zoom)) calc(16px * var(--table-zoom)) !important;
+    font-size: calc(0.875rem * var(--table-zoom));
     color: var(--text-primary);
     line-height: 1.5;
     vertical-align: middle !important;
@@ -553,17 +571,17 @@ body .standard-table td {
 
 body .standard-table .actions-header {
     text-align: center;
-    min-width: 120px;
-    width: 120px;
+    min-width: calc(120px * var(--table-zoom));
+    width: calc(120px * var(--table-zoom));
     white-space: nowrap;
 }
 
 body .standard-table .actions-column {
     text-align: center;
-    min-width: 120px;
-    width: 120px;
+    min-width: calc(120px * var(--table-zoom));
+    width: calc(120px * var(--table-zoom));
     white-space: nowrap;
-    padding: 10px 8px !important;
+    padding: calc(10px * var(--table-zoom)) calc(8px * var(--table-zoom)) !important;
 }
 
 /* ========================================
@@ -797,6 +815,30 @@ body .standard-table .actions-column {
 
     .pagination-controls {
         flex-wrap: wrap;
+    }
+}
+
+@media (max-width: 1200px) {
+    .table-responsive {
+        --table-zoom: 0.95;
+    }
+}
+
+@media (max-width: 1100px) {
+    .table-responsive {
+        --table-zoom: 0.9;
+    }
+}
+
+@media (max-width: 1000px) {
+    .table-responsive {
+        --table-zoom: 0.85;
+    }
+}
+
+@media (max-width: 900px) {
+    .standard-table {
+        min-width: var(--table-min-scroll-width);
     }
 }
 

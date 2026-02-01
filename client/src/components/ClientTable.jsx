@@ -180,8 +180,8 @@ export default function ClientTableWrapper({
                 >
                   <div className="th-content">
                     <div className="th-label">
-                      {column.label}
-                      <div style={{ display: "flex", gap: "4px", alignItems: "center" }}>
+                      <span className="th-text">{column.label}</span>
+                      <div className="th-actions">
                         {column.sortable && (
                           <span
                             className="sort-icon"
