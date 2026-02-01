@@ -1,11 +1,44 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { postJson } from "../../api";
+import { loadBootstrap } from "../../bootstrap";
 
 export default function Login() {
   const [logoFailed, setLogoFailed] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const appOrigin = import.meta.env.VITE_APP_ORIGIN || "";
+  const navigate = useNavigate();
+
+  const applyThemeSettings = (settings) => {
+    if (!settings) return;
+    const root = document.documentElement;
+    const body = document.body;
+    const theme = settings.theme || "light";
+    const accentColor = settings.accentColor || "#2c5f41";
+    const accentTextColor = settings.accentTextColor || "#ffffff";
+    const gradientIntensity = Number.isFinite(settings.gradientIntensity) ? settings.gradientIntensity : 30;
+    const hexToRgb = (hex) => {
+      const clean = hex.replace("#", "");
+      if (clean.length !== 6) return [44, 95, 65];
+      return [0, 2, 4].map((offset) => parseInt(clean.slice(offset, offset + 2), 16));
+    };
+    const mixWithBlack = (hex, intensity) => {
+      const ratio = Math.min(100, Math.max(0, intensity)) / 100;
+      const [r, g, b] = hexToRgb(hex);
+      const mixed = [r, g, b].map((value) => Math.round(value * (1 - ratio)));
+      return `rgb(${mixed.join(",")})`;
+    };
+    root.dataset.theme = theme;
+    root.classList.remove("theme-light", "theme-dark", "theme-auto");
+    root.classList.add(`theme-${theme}`);
+    body.dataset.theme = theme;
+    root.style.setProperty("--accent-color", accentColor);
+    root.style.setProperty("--accent-text-color", accentTextColor);
+    root.style.setProperty("--accent-color-rgb", hexToRgb(accentColor).join(","));
+    root.style.setProperty("--accent-hover", `${accentColor}E6`);
+    root.style.setProperty("--sidebar-accent-second", mixWithBlack(accentColor, gradientIntensity));
+  };
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -16,8 +49,21 @@ export default function Login() {
     setError("");
     setLoading(true);
     try {
-      await postJson("/auth/login", { identifier, password });
-      window.location.assign("/");
+      const response = await postJson("/auth/login", { identifier, password });
+      if (response?.themeSettings) {
+        localStorage.setItem("themeSettings", JSON.stringify(response.themeSettings));
+        applyThemeSettings(response.themeSettings);
+      }
+      const bootstrap = await loadBootstrap({ force: true }).catch(() => null);
+      if (!bootstrap?.user) {
+        throw new Error("Inloggen gelukt, maar sessie is nog niet beschikbaar. Probeer opnieuw.");
+      }
+      const target = appOrigin ? `${appOrigin}/` : "/";
+      if (appOrigin && window.location.origin !== appOrigin) {
+        window.location.assign(target);
+      } else {
+        navigate("/");
+      }
     } catch (err) {
       setError(err.message || "Inloggen mislukt.");
     } finally {

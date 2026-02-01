@@ -2,6 +2,10 @@ const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
 const crypto = require("crypto");
+const fs = require("fs");
+const path = require("path");
+const http = require("http");
+const https = require("https");
 const config = require("./config");
 const db = require("./db");
 const { requireMicrosoftAuth } = require("./microsoftAuth");
@@ -12,6 +16,7 @@ const SESSION_SECRET_MIN_LENGTH = 32;
 const CSRF_COOKIE = "csrf_token";
 
 const app = express();
+app.set("etag", false);
 
 const PAGE_PATTERNS = [
   { name: "Home", pattern: "/home*" },
@@ -33,6 +38,15 @@ const DEFAULT_SETTINGS = {
   gradient_intensity: 30,
 };
 
+const CLIENT_DIST_DIR = path.resolve(__dirname, "..", "..", "client", "dist");
+const CLIENT_DIST_INDEX = path.join(CLIENT_DIST_DIR, "index.html");
+const CLIENT_DEV_INDEX = path.resolve(__dirname, "..", "..", "client", "index.html");
+
+const VITE_PORT = Number(process.env.VITE_PORT || 0);
+const VITE_ORIGIN =
+  process.env.VITE_ORIGIN ||
+  (VITE_PORT ? `http://localhost:${VITE_PORT}` : config.corsOrigin || "");
+
 async function ensureDbConfigured(res) {
   if (!config.db.server) {
     res.status(501).json({ error: "Database is not configured." });
@@ -44,6 +58,13 @@ async function ensureDbConfigured(res) {
 app.use(helmet());
 app.use(cors({ origin: config.corsOrigin, credentials: true }));
 app.use(express.json());
+app.use("/api", (req, res, next) => {
+  res.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+  res.set("Pragma", "no-cache");
+  res.set("Expires", "0");
+  res.set("Surrogate-Control", "no-store");
+  next();
+});
 if (config.trustProxy) {
   app.set("trust proxy", 1);
 }
@@ -67,6 +88,194 @@ function setCsrfCookie(res, token) {
     secure,
     path: "/",
   });
+}
+
+function clamp(value, min, max) {
+  return Math.min(max, Math.max(min, value));
+}
+
+function normalizeHex(value, fallback) {
+  if (typeof value !== "string") return fallback;
+  const trimmed = value.trim();
+  if (!/^#?[0-9a-fA-F]{6}$/.test(trimmed)) return fallback;
+  return trimmed.startsWith("#") ? trimmed : `#${trimmed}`;
+}
+
+function hexToRgb(hex) {
+  const clean = hex.replace("#", "");
+  if (clean.length !== 6) return [44, 95, 65];
+  return [0, 2, 4].map((offset) => parseInt(clean.slice(offset, offset + 2), 16));
+}
+
+function mixWithBlack(hex, intensity) {
+  const ratio = clamp(intensity, 0, 100) / 100;
+  const [r, g, b] = hexToRgb(hex);
+  const mixed = [r, g, b].map((value) => Math.round(value * (1 - ratio)));
+  return `rgb(${mixed.join(",")})`;
+}
+
+async function fetchUserSettings(userId) {
+  const pool = await db.getPool();
+  const request = pool.request();
+  request.input("user_id", userId);
+  const result = await request.query(
+    "SELECT theme, display_mode, accent_color, accent_text_color, sidebar_variant, gradient_intensity FROM dbo.tbl_user_settings WHERE user_id = @user_id"
+  );
+  return { ...DEFAULT_SETTINGS, ...(result.recordset[0] || {}) };
+}
+
+async function buildBootstrap(req, res) {
+  const appSettings = {
+    sidebarOrientation: "vertical",
+    featureFlags: {
+      enableUserSettings: process.env.FEATURE_ENABLE_USER_SETTINGS === "1",
+      enableUserProfile: process.env.FEATURE_ENABLE_USER_PROFILE !== "0",
+    },
+    hasMicrosoftClient: Boolean(config.microsoft.clientId),
+  };
+
+  const fallbackTheme = {
+    theme: DEFAULT_SETTINGS.theme,
+    accentColor: DEFAULT_SETTINGS.accent_color,
+    accentTextColor: DEFAULT_SETTINGS.accent_text_color,
+    sidebarVariant: DEFAULT_SETTINGS.sidebar_variant,
+    gradientIntensity: DEFAULT_SETTINGS.gradient_intensity,
+  };
+
+  const bootstrap = {
+    user: null,
+    permissions: { allowedPaths: [], roles: [] },
+    appSettings,
+    themeSettings: fallbackTheme,
+  };
+
+  if (!config.db.server) {
+    return bootstrap;
+  }
+
+  try {
+    const session = await auth.getSessionUser(req);
+    if (!session?.user) {
+      return bootstrap;
+    }
+
+    req.user = session.user;
+    if (config.csrfEnabled && !readCookie(req, CSRF_COOKIE)) {
+      setCsrfCookie(res, crypto.randomBytes(24).toString("base64url"));
+    }
+
+    const permissions = await loadPermissions(req);
+    const settings = await fetchUserSettings(req.user.user_id);
+
+    bootstrap.user = {
+      id: req.user.user_id,
+      username: req.user.username,
+      email: req.user.email,
+      role: req.user.role || "user",
+      is_super_admin: Boolean(req.user.is_super_admin),
+    };
+    bootstrap.permissions = permissions;
+    bootstrap.themeSettings = {
+      theme: settings.theme || DEFAULT_SETTINGS.theme,
+      accentColor: settings.accent_color || DEFAULT_SETTINGS.accent_color,
+      accentTextColor: settings.accent_text_color || DEFAULT_SETTINGS.accent_text_color,
+      sidebarVariant: settings.sidebar_variant || DEFAULT_SETTINGS.sidebar_variant,
+      gradientIntensity: Number.isFinite(settings.gradient_intensity)
+        ? settings.gradient_intensity
+        : DEFAULT_SETTINGS.gradient_intensity,
+    };
+
+    return bootstrap;
+  } catch (error) {
+    return bootstrap;
+  }
+}
+
+function buildBootstrapMarkup(bootstrap) {
+  const theme = bootstrap?.themeSettings?.theme || DEFAULT_SETTINGS.theme;
+  const accentColor = normalizeHex(
+    bootstrap?.themeSettings?.accentColor,
+    DEFAULT_SETTINGS.accent_color
+  );
+  const accentTextColor = normalizeHex(
+    bootstrap?.themeSettings?.accentTextColor,
+    DEFAULT_SETTINGS.accent_text_color
+  );
+  const gradientIntensity = Number.isFinite(Number(bootstrap?.themeSettings?.gradientIntensity))
+    ? clamp(Number(bootstrap.themeSettings.gradientIntensity), 0, 100)
+    : DEFAULT_SETTINGS.gradient_intensity;
+  const accentRgb = hexToRgb(accentColor);
+  const sidebarAccentSecond = mixWithBlack(accentColor, gradientIntensity);
+  const bootstrapJson = JSON.stringify(bootstrap).replace(/</g, "\\u003c");
+  const themeJson = JSON.stringify(theme);
+
+  return `
+    <style id="bootstrap-theme">
+      :root {
+        --accent-color: ${accentColor};
+        --accent-color-rgb: ${accentRgb.join(",")};
+        --accent-hover: ${accentColor}E6;
+        --accent-text-color: ${accentTextColor};
+        --sidebar-accent-second: ${sidebarAccentSecond};
+      }
+    </style>
+    <script>
+      window.__BOOTSTRAP__ = ${bootstrapJson};
+      (function () {
+        var theme = ${themeJson};
+        var root = document.documentElement;
+        root.dataset.theme = theme;
+        root.classList.remove("theme-light", "theme-dark", "theme-auto");
+        root.classList.add("theme-" + theme);
+      })();
+    </script>
+  `;
+}
+
+function shouldProxyToVite(pathname) {
+  return (
+    pathname.startsWith("/@vite") ||
+    pathname.startsWith("/@react-refresh") ||
+    pathname.startsWith("/@id") ||
+    pathname.startsWith("/@fs") ||
+    pathname.startsWith("/src/") ||
+    pathname.startsWith("/node_modules/") ||
+    pathname.startsWith("/.vite/") ||
+    pathname.startsWith("/assets/") ||
+    pathname === "/vite.svg"
+  );
+}
+
+function proxyToVite(req, res) {
+  if (!VITE_ORIGIN) {
+    res.status(502).send("Vite dev server is not configured.");
+    return;
+  }
+
+  const targetUrl = new URL(req.originalUrl, VITE_ORIGIN);
+  const client = targetUrl.protocol === "https:" ? https : http;
+  const proxyReq = client.request(
+    {
+      hostname: targetUrl.hostname,
+      port: targetUrl.port,
+      path: `${targetUrl.pathname}${targetUrl.search}`,
+      method: req.method,
+      headers: {
+        ...req.headers,
+        host: targetUrl.host,
+      },
+    },
+    (proxyRes) => {
+      res.writeHead(proxyRes.statusCode || 502, proxyRes.headers);
+      proxyRes.pipe(res, { end: true });
+    }
+  );
+
+  proxyReq.on("error", () => {
+    res.status(502).send("Failed to reach Vite dev server.");
+  });
+
+  req.pipe(proxyReq, { end: true });
 }
 
 if (config.csrfEnabled) {
@@ -187,6 +396,19 @@ function requirePermission(pattern) {
 
 app.get("/api/health", (req, res) => {
   res.json({ status: "ok", env: config.env });
+});
+
+app.get("/api/bootstrap", async (req, res) => {
+  try {
+    res.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+    res.set("Pragma", "no-cache");
+    res.set("Expires", "0");
+    res.set("Surrogate-Control", "no-store");
+    const bootstrap = await buildBootstrap(req, res);
+    res.json(bootstrap);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to load bootstrap." });
+  }
 });
 
 app.get("/api/profile", requireAuth, (req, res) => {
@@ -315,6 +537,22 @@ app.post("/api/auth/login", async (req, res) => {
     update.input("user_id", user.user_id);
     await update.query("UPDATE dbo.tbl_users SET last_login = SYSDATETIME() WHERE user_id = @user_id");
 
+    let themeSettings = null;
+    try {
+      const settings = await fetchUserSettings(user.user_id);
+      themeSettings = {
+        theme: settings.theme || DEFAULT_SETTINGS.theme,
+        accentColor: settings.accent_color || DEFAULT_SETTINGS.accent_color,
+        accentTextColor: settings.accent_text_color || DEFAULT_SETTINGS.accent_text_color,
+        sidebarVariant: settings.sidebar_variant || DEFAULT_SETTINGS.sidebar_variant,
+        gradientIntensity: Number.isFinite(settings.gradient_intensity)
+          ? settings.gradient_intensity
+          : DEFAULT_SETTINGS.gradient_intensity,
+      };
+    } catch (error) {
+      themeSettings = null;
+    }
+
     return res.json({
       success: true,
       user: {
@@ -324,6 +562,7 @@ app.post("/api/auth/login", async (req, res) => {
         role: user.role || "user",
         is_super_admin: Boolean(user.is_super_admin),
       },
+      themeSettings,
     });
   } catch (error) {
     return res.status(500).json({ error: "Inloggen mislukt." });
@@ -549,10 +788,10 @@ app.get("/api/roles/matrix", requireAuth, requirePermission("/rollen*"), async (
     const pool = await db.getPool();
     const rolesResult = await pool
       .request()
-      .query("SELECT id, naam, volgorde FROM dbo.tbl_roles ORDER BY volgorde, id");
+      .query("SELECT id, naam, volgorde FROM dbo.vw_roles ORDER BY volgorde, id");
     const permsResult = await pool
       .request()
-      .query("SELECT role_id, page, allowed FROM dbo.tbl_role_permissions WHERE allowed = 1");
+      .query("SELECT role_id, page, allowed FROM dbo.vw_role_permissions WHERE allowed = 1");
     const permissions = {};
     for (const role of rolesResult.recordset) {
       permissions[role.id] = [];
@@ -810,22 +1049,105 @@ app.get("/api/accounts/users", requireAuth, requirePermission("/accounts*"), asy
       SELECT u.user_id AS id,
              u.username,
              u.email,
-             COALESCE(r.naam, u.role) AS role,
+             COALESCE(r.role_naam, u.role) AS role,
+             r.role_id AS role_id,
              u.is_super_admin,
              u.last_login
-      FROM dbo.tbl_users u
+      FROM dbo.vw_accountbeheer_users u
       OUTER APPLY (
-        SELECT TOP 1 r.naam
-        FROM dbo.tbl_user_roles ur
-        JOIN dbo.tbl_roles r ON r.id = ur.role_id
+        SELECT TOP 1 ur.role_id,
+                     ur.role_naam,
+                     ur.role_volgorde
+        FROM dbo.vw_user_roles ur
         WHERE ur.user_id = u.user_id
-        ORDER BY r.volgorde
+        ORDER BY ur.role_volgorde
       ) r
       ORDER BY u.is_super_admin DESC, u.username
     `);
     res.json(result.recordset || []);
   } catch (error) {
     res.status(500).json({ error: "Failed to load users." });
+  }
+});
+
+app.get("/api/accounts/roles", requireAuth, requirePermission("/accounts*"), async (req, res) => {
+  if (!(await ensureDbConfigured(res))) return;
+  try {
+    const pool = await db.getPool();
+    const result = await pool.request().query(`
+      SELECT id, naam, volgorde
+      FROM dbo.vw_roles
+      ORDER BY volgorde, id
+    `);
+    res.json(result.recordset || []);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to load roles." });
+  }
+});
+
+app.post("/api/accounts/users/:id/role", requireAuth, requirePermission("/accounts*"), async (req, res) => {
+  if (!(await ensureDbConfigured(res))) return;
+  try {
+    const userId = Number(req.params.id);
+    const roleId = req.body?.role_id ? Number(req.body.role_id) : null;
+    if (!userId || Number.isNaN(userId)) {
+      return res.status(400).json({ error: "User id is required." });
+    }
+    if (req.user?.user_id === userId) {
+      return res.status(400).json({ error: "Je kunt je eigen rol niet aanpassen." });
+    }
+
+    const pool = await db.getPool();
+    const request = pool.request();
+    request.input("user_id", userId);
+    await request.query("DELETE FROM dbo.tbl_user_roles WHERE user_id = @user_id");
+
+    if (roleId && !Number.isNaN(roleId)) {
+      const roleLookup = pool.request();
+      roleLookup.input("role_id", roleId);
+      const roleResult = await roleLookup.query("SELECT naam FROM dbo.tbl_roles WHERE id = @role_id");
+      const roleName = roleResult.recordset[0]?.naam || null;
+
+      const insert = pool.request();
+      insert.input("user_id", userId);
+      insert.input("role_id", roleId);
+      await insert.query("INSERT INTO dbo.tbl_user_roles (user_id, role_id) VALUES (@user_id, @role_id)");
+
+      const update = pool.request();
+      update.input("user_id", userId);
+      update.input("role", roleName);
+      await update.query("UPDATE dbo.tbl_users SET role = @role WHERE user_id = @user_id");
+    } else {
+      const update = pool.request();
+      update.input("user_id", userId);
+      update.input("role", null);
+      await update.query("UPDATE dbo.tbl_users SET role = @role WHERE user_id = @user_id");
+    }
+
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to update user role." });
+  }
+});
+
+app.delete("/api/accounts/users/:id", requireAuth, requirePermission("/accounts*"), async (req, res) => {
+  if (!(await ensureDbConfigured(res))) return;
+  try {
+    const userId = Number(req.params.id);
+    if (!userId || Number.isNaN(userId)) {
+      return res.status(400).json({ error: "User id is required." });
+    }
+    if (req.user?.user_id === userId) {
+      return res.status(400).json({ error: "Je kunt je eigen account niet verwijderen." });
+    }
+
+    const pool = await db.getPool();
+    const request = pool.request();
+    request.input("user_id", userId);
+    await request.query("DELETE FROM dbo.tbl_users WHERE user_id = @user_id");
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to delete user." });
   }
 });
 
@@ -901,6 +1223,39 @@ app.post("/api/feature-flags/save", requireAuth, requirePermission("/feature-fla
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: "Failed to save feature flags." });
+  }
+});
+
+if (fs.existsSync(CLIENT_DIST_DIR)) {
+  app.use(express.static(CLIENT_DIST_DIR));
+}
+
+if (!isProduction && VITE_ORIGIN) {
+  app.use((req, res, next) => {
+    if (shouldProxyToVite(req.path || req.url || "")) {
+      proxyToVite(req, res);
+      return;
+    }
+    next();
+  });
+}
+
+app.get(/^(?!\/api).*/, async (req, res) => {
+  const indexPath = fs.existsSync(CLIENT_DIST_INDEX) ? CLIENT_DIST_INDEX : CLIENT_DEV_INDEX;
+  if (!fs.existsSync(indexPath)) {
+    res.status(404).send("Client index not found.");
+    return;
+  }
+
+  try {
+    const template = fs.readFileSync(indexPath, "utf-8");
+    const bootstrap = await buildBootstrap(req, res);
+    const markup = buildBootstrapMarkup(bootstrap);
+    const html = template.replace("<!-- APP_BOOTSTRAP -->", markup);
+    res.setHeader("Content-Type", "text/html");
+    res.send(html);
+  } catch (error) {
+    res.status(500).send("Failed to load app.");
   }
 });
 

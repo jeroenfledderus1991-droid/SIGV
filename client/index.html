@@ -4,6 +4,61 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- APP_BOOTSTRAP -->
+    <script>
+      (function () {
+        try {
+          if (window.__BOOTSTRAP__ && window.__BOOTSTRAP__.themeSettings) {
+            return;
+          }
+          var raw = localStorage.getItem("themeSettings");
+          if (!raw) return;
+          var data = JSON.parse(raw);
+          if (!data || typeof data !== "object") return;
+          var theme = data.theme;
+          if (theme !== "light" && theme !== "dark" && theme !== "auto") {
+            theme = "light";
+          }
+          var normalizeHex = function (value, fallback) {
+            if (typeof value !== "string") return fallback;
+            var trimmed = value.trim();
+            if (!/^#?[0-9a-fA-F]{6}$/.test(trimmed)) return fallback;
+            return trimmed.charAt(0) === "#" ? trimmed : "#" + trimmed;
+          };
+          var accentColor = normalizeHex(data.accentColor, "#2c5f41");
+          var accentTextColor = normalizeHex(data.accentTextColor, "#ffffff");
+          var gradientIntensity = Number(data.gradientIntensity);
+          if (!isFinite(gradientIntensity)) gradientIntensity = 30;
+          if (gradientIntensity < 0) gradientIntensity = 0;
+          if (gradientIntensity > 100) gradientIntensity = 100;
+          var hexToRgb = function (hex) {
+            var clean = hex.replace("#", "");
+            return [0, 2, 4].map(function (offset) {
+              return parseInt(clean.slice(offset, offset + 2), 16);
+            });
+          };
+          var mixWithBlack = function (hex, intensity) {
+            var ratio = intensity / 100;
+            var rgb = hexToRgb(hex);
+            var mixed = rgb.map(function (value) {
+              return Math.round(value * (1 - ratio));
+            });
+            return "rgb(" + mixed.join(",") + ")";
+          };
+          var root = document.documentElement;
+          root.dataset.theme = theme;
+          root.classList.remove("theme-light", "theme-dark", "theme-auto");
+          root.classList.add("theme-" + theme);
+          root.style.setProperty("--accent-color", accentColor);
+          root.style.setProperty("--accent-text-color", accentTextColor);
+          root.style.setProperty("--accent-color-rgb", hexToRgb(accentColor).join(","));
+          root.style.setProperty("--accent-hover", accentColor + "E6");
+          root.style.setProperty("--sidebar-accent-second", mixWithBlack(accentColor, gradientIntensity));
+        } catch (error) {
+          return;
+        }
+      })();
+    </script>
     <link
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"

@@ -1,39 +1,88 @@
 import { useEffect, useState } from "react";
 import { getJson } from "../api";
+import { getBootstrap, loadBootstrap } from "../bootstrap";
+
+const STORAGE_KEY = "permissions";
 
 const DEFAULT_STATE = {
   allowedPaths: [],
   roles: [],
 };
 
+function normalizePermissions(data) {
+  if (!data || typeof data !== "object") return null;
+  return {
+    allowedPaths: Array.isArray(data.allowedPaths) ? data.allowedPaths : [],
+    roles: Array.isArray(data.roles) ? data.roles : [],
+  };
+}
+
+function getStoredPermissions() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    return normalizePermissions(JSON.parse(raw));
+  } catch {
+    return null;
+  }
+}
+
+function storePermissions(data) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  } catch {
+    return;
+  }
+}
+
 export default function usePermissions(enabled = true) {
-  const [permissions, setPermissions] = useState(DEFAULT_STATE);
-  const [loading, setLoading] = useState(enabled);
+  const bootstrap = getBootstrap();
+  const bootstrapPermissions = enabled ? bootstrap.permissions : null;
+  const cachedPermissions = enabled ? bootstrapPermissions || getStoredPermissions() : null;
+  const [permissions, setPermissions] = useState(cachedPermissions || DEFAULT_STATE);
+  const [loading, setLoading] = useState(enabled && !cachedPermissions);
 
   useEffect(() => {
     let mounted = true;
+    const fallbackFetch = () => {
+      getJson("/auth/permissions")
+        .then((data) => {
+          if (!mounted) return;
+          const next = normalizePermissions(data);
+          if (!next) return;
+          setPermissions(next);
+          storePermissions(next);
+        })
+        .catch(() => {
+          if (mounted && !cachedPermissions) setPermissions(DEFAULT_STATE);
+        })
+        .finally(() => {
+          if (mounted) setLoading(false);
+        });
+    };
     if (!enabled) {
       setPermissions(DEFAULT_STATE);
       setLoading(false);
+      storePermissions(DEFAULT_STATE);
       return () => {
         mounted = false;
       };
     }
 
-    setLoading(true);
-    getJson("/auth/permissions")
-      .then((data) => {
+    loadBootstrap()
+      .then((bootstrapData) => {
         if (!mounted) return;
-        setPermissions({
-          allowedPaths: data.allowedPaths || [],
-          roles: data.roles || [],
-        });
+        const next = normalizePermissions(bootstrapData?.permissions);
+        if (next) {
+          setPermissions(next);
+          storePermissions(next);
+          setLoading(false);
+          return;
+        }
+        fallbackFetch();
       })
       .catch(() => {
-        if (mounted) setPermissions(DEFAULT_STATE);
-      })
-      .finally(() => {
-        if (mounted) setLoading(false);
+        fallbackFetch();
       });
 
     return () => {
@@ -41,5 +90,5 @@ export default function usePermissions(enabled = true) {
     };
   }, [enabled]);
 
-  return { permissions, loading };
+  return { permissions, loading, hasCache: Boolean(cachedPermissions) };
 }

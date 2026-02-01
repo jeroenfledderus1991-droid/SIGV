@@ -26,6 +26,28 @@ const navItems = [
   { to: "/feature-flags", label: "Feature flags", icon: "fa-flag", permissions: ["/feature-flags*"] },
 ];
 
+function PageSkeleton() {
+  return (
+    <div className="page-skeleton">
+      <div className="skeleton card-skeleton">
+        <div className="skeleton-line line-lg" />
+        <div className="skeleton-line line-md" />
+      </div>
+      <div className="skeleton skeleton-grid">
+        <div className="skeleton-card" />
+        <div className="skeleton-card" />
+        <div className="skeleton-card" />
+      </div>
+      <div className="skeleton skeleton-table">
+        <div className="skeleton-line line-md" />
+        <div className="skeleton-line" />
+        <div className="skeleton-line" />
+        <div className="skeleton-line" />
+      </div>
+    </div>
+  );
+}
+
 function App() {
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem(SIDEBAR_KEY) === "1");
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -40,10 +62,10 @@ function App() {
       path.startsWith("/reset-password")
     );
   }, [location.pathname]);
-  const { user, loading: authLoading, logout } = useAuth(!isAuthRoute);
-  const { settings } = useThemeSettings(!isAuthRoute && Boolean(user));
-  const { settings: appSettings } = useAppSettings();
-  const { permissions, loading: permissionsLoading } = usePermissions(Boolean(user));
+  const { user, loading: authLoading, logout, hasCache: authCached, ready: authReady } = useAuth(!isAuthRoute);
+  const { settings, loading: themeLoading, hasCache: themeCached } = useThemeSettings(!isAuthRoute && Boolean(user));
+  const { settings: appSettings, loading: appSettingsLoading, hasCache: appSettingsCached } = useAppSettings();
+  const { permissions, loading: permissionsLoading, hasCache: permissionsCached } = usePermissions(Boolean(user));
 
   const effectiveAllowedPaths = useMemo(() => {
     if (user?.is_super_admin && !permissions.allowedPaths.length) {
@@ -126,15 +148,23 @@ function App() {
     mobileOpen ? "mobile-open" : ""
   } variant-${settings.sidebarVariant}`;
 
-  if (!isAuthRoute && authLoading) {
-    return null;
-  }
+  const appLoading =
+    !isAuthRoute &&
+    (!authReady ||
+      (authLoading && !authCached) ||
+      (appSettingsLoading && !appSettingsCached) ||
+      (themeLoading && !themeCached) ||
+      (permissionsLoading && !permissionsCached));
 
-  if (!isAuthRoute && !authLoading && !user) {
+  if (!isAuthRoute && authReady && !appLoading && !user) {
     return <Navigate to="/login" replace />;
   }
 
-  if (!isAuthRoute && !permissionsLoading && effectiveAllowedPaths.length) {
+  if (isAuthRoute && authReady && user) {
+    return <Navigate to="/" replace />;
+  }
+
+  if (!isAuthRoute && !appLoading && effectiveAllowedPaths.length) {
     if (!isAllowedPath(location.pathname) && location.pathname !== firstAllowedPath) {
       return <Navigate to={firstAllowedPath} replace />;
     }
@@ -256,45 +286,49 @@ function App() {
         </header>
 
         <div className="content-area">
-          <Routes>
-            <Route path="/" element={<Dashboard />} />
-            <Route
-              path="/accounts"
-              element={isAllowedPath("/accounts") ? <Accountbeheer /> : <Navigate to={firstAllowedPath} replace />}
-            />
-            <Route
-              path="/rollen"
-              element={isAllowedPath("/rollen") ? <Rollen /> : <Navigate to={firstAllowedPath} replace />}
-            />
-            <Route
-              path="/stamgegevens"
-              element={isAllowedPath("/stamgegevens") ? <Stamgegevens /> : <Navigate to={firstAllowedPath} replace />}
-            />
-            <Route
-              path="/feature-flags"
-              element={
-                isAllowedPath("/feature-flags") ? <FeatureFlags /> : <Navigate to={firstAllowedPath} replace />
-              }
-            />
-            {enableUserSettings ? (
+          {appLoading ? (
+            <PageSkeleton />
+          ) : (
+            <Routes>
+              <Route path="/" element={<Dashboard />} />
               <Route
-                path="/settings"
+                path="/accounts"
+                element={isAllowedPath("/accounts") ? <Accountbeheer /> : <Navigate to={firstAllowedPath} replace />}
+              />
+              <Route
+                path="/rollen"
+                element={isAllowedPath("/rollen") ? <Rollen /> : <Navigate to={firstAllowedPath} replace />}
+              />
+              <Route
+                path="/stamgegevens"
+                element={isAllowedPath("/stamgegevens") ? <Stamgegevens /> : <Navigate to={firstAllowedPath} replace />}
+              />
+              <Route
+                path="/feature-flags"
                 element={
-                  isAllowedPath("/settings") ? <Settings /> : <Navigate to={firstAllowedPath} replace />
+                  isAllowedPath("/feature-flags") ? <FeatureFlags /> : <Navigate to={firstAllowedPath} replace />
                 }
               />
-            ) : (
-              <Route path="/settings" element={<Navigate to="/" replace />} />
-            )}
-            {enableUserProfile ? (
-              <Route
-                path="/profiel"
-                element={isAllowedPath("/profiel") ? <Profile /> : <Navigate to={firstAllowedPath} replace />}
-              />
-            ) : (
-              <Route path="/profiel" element={<Navigate to="/" replace />} />
-            )}
-          </Routes>
+              {enableUserSettings ? (
+                <Route
+                  path="/settings"
+                  element={
+                    isAllowedPath("/settings") ? <Settings /> : <Navigate to={firstAllowedPath} replace />
+                  }
+                />
+              ) : (
+                <Route path="/settings" element={<Navigate to="/" replace />} />
+              )}
+              {enableUserProfile ? (
+                <Route
+                  path="/profiel"
+                  element={isAllowedPath("/profiel") ? <Profile /> : <Navigate to={firstAllowedPath} replace />}
+                />
+              ) : (
+                <Route path="/profiel" element={<Navigate to="/" replace />} />
+              )}
+            </Routes>
+          )}
         </div>
 
         <footer className="app-footer">Template UI | Live DB ready</footer>
