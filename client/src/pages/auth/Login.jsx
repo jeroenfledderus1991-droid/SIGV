@@ -77,13 +77,13 @@ export default function Login() {
         <div className="auth-header">
           <div className={`auth-logo ${logoFailed ? "auth-logo-circle" : "auth-logo-image"}`}>
             {!logoFailed ? (
-              <img src="/vite.svg" alt="Logo" onError={() => setLogoFailed(true)} />
+              <img src="/expert_excel_logo.png" alt="Expert Excel" onError={() => setLogoFailed(true)} />
             ) : (
               <i className="fas fa-leaf" />
             )}
           </div>
           <h1 className="auth-title">Planningstool</h1>
-          <p className="auth-subtitle">Welkom terug</p>
+          <p className="auth-subtitle">Meld je aan om door te gaan</p>
         </div>
 
         {error && (

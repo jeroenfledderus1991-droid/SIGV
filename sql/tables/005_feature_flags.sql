@@ -59,3 +59,18 @@ IF NOT EXISTS (SELECT 1 FROM dbo.tbl_feature_flags WHERE flag_name = 'ENABLE_USE
     INSERT INTO dbo.tbl_feature_flags (flag_name, enabled, page_key, description)
     VALUES ('ENABLE_USER_SETTINGS', 1, 'SETTINGS', 'Sta gebruikers toe om persoonlijke instellingen aan te passen (thema, kleuren, sidebar)');
 GO
+
+IF NOT EXISTS (SELECT 1 FROM dbo.tbl_feature_flags WHERE flag_name = 'ENABLE_AUTO_LOGINS')
+    INSERT INTO dbo.tbl_feature_flags (flag_name, enabled, page_key, description)
+    VALUES ('ENABLE_AUTO_LOGINS', 0, 'SYSTEM', 'Sta automatische login via speciale link toe');
+GO
+
+IF NOT EXISTS (SELECT 1 FROM dbo.tbl_feature_flags WHERE flag_name = 'ENABLE_ADMIN_AUTO_LOGIN')
+    INSERT INTO dbo.tbl_feature_flags (flag_name, enabled, page_key, description)
+    VALUES ('ENABLE_ADMIN_AUTO_LOGIN', 0, 'SYSTEM', 'Log automatisch in als superadmin (EESA)');
+GO
+
+IF NOT EXISTS (SELECT 1 FROM dbo.tbl_feature_flags WHERE flag_name = 'ENABLE_USER_AUTO_LOGIN')
+    INSERT INTO dbo.tbl_feature_flags (flag_name, enabled, page_key, description)
+    VALUES ('ENABLE_USER_AUTO_LOGIN', 0, 'SYSTEM', 'Log automatisch in als standaard gebruiker');
+GO

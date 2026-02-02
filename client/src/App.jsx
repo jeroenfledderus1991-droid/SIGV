@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { NavLink, Navigate, Route, Routes, useLocation } from "react-router-dom";
+import { NavLink, Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import Dashboard from "./pages/Dashboard.jsx";
 import Accountbeheer from "./pages/Accountbeheer.jsx";
 import Rollen from "./pages/Rollen.jsx";
@@ -15,6 +15,7 @@ import useThemeSettings from "./hooks/useThemeSettings.js";
 import useAppSettings from "./hooks/useAppSettings.js";
 import useAuth from "./hooks/useAuth.js";
 import usePermissions from "./hooks/usePermissions.js";
+import { loadBootstrap } from "./bootstrap.js";
 
 const SIDEBAR_KEY = "sidebarCollapsed";
 
@@ -52,7 +53,9 @@ function App() {
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem(SIDEBAR_KEY) === "1");
   const [mobileOpen, setMobileOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [authRouteUser, setAuthRouteUser] = useState(null);
   const location = useLocation();
+  const navigate = useNavigate();
   const isAuthRoute = useMemo(() => {
     const path = location.pathname;
     return (
@@ -138,6 +141,31 @@ function App() {
     setProfileOpen(false);
   }, [location.pathname]);
 
+  useEffect(() => {
+    let mounted = true;
+    if (!isAuthRoute) {
+      setAuthRouteUser(null);
+      return () => {
+        mounted = false;
+      };
+    }
+    loadBootstrap({ force: true })
+      .then((bootstrap) => {
+        if (!mounted) return;
+        if (bootstrap?.user) {
+          setAuthRouteUser(bootstrap.user);
+        } else {
+          setAuthRouteUser(null);
+        }
+      })
+      .catch(() => {
+        if (mounted) setAuthRouteUser(null);
+      });
+    return () => {
+      mounted = false;
+    };
+  }, [isAuthRoute]);
+
   const toggleSidebar = () => {
     const next = !collapsed;
     setCollapsed(next);
@@ -160,7 +188,7 @@ function App() {
     return <Navigate to="/login" replace />;
   }
 
-  if (isAuthRoute && authReady && user) {
+  if (isAuthRoute && (authRouteUser || (authReady && user))) {
     return <Navigate to="/" replace />;
   }
 
@@ -248,7 +276,7 @@ function App() {
                   className="profile-dropdown-item logout-item"
                   onClick={() => {
                     setProfileOpen(false);
-                    logout().finally(() => window.location.assign("/login"));
+                    logout().finally(() => navigate("/login", { replace: true }));
                   }}
                 >
                   <i className="fas fa-sign-out-alt" />

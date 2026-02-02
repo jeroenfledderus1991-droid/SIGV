@@ -35,6 +35,8 @@ const config = {
     tenantId: process.env.MICROSOFT_TENANT_ID || "",
   },
   appUserEmail: process.env.APP_DEFAULT_USER_EMAIL || "",
+  autoLoginAdminEmail: process.env.AUTO_LOGIN_ADMIN_EMAIL || "",
+  autoLoginUserEmail: process.env.AUTO_LOGIN_USER_EMAIL || "",
   sessionSecret: process.env.SESSION_SECRET || "",
   sessionCookieName: process.env.SESSION_COOKIE_NAME || "session_id",
   sessionDurationHours: Number(process.env.SESSION_DURATION_HOURS || 24 * 7),

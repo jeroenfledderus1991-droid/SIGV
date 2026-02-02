@@ -37,6 +37,14 @@ const DEFAULT_SETTINGS = {
   sidebar_variant: "accent-gradient",
   gradient_intensity: 30,
 };
+const AUTO_LOGIN_MASTER_FLAG = "ENABLE_AUTO_LOGINS";
+const AUTO_LOGIN_ADMIN_FLAG = "ENABLE_ADMIN_AUTO_LOGIN";
+const AUTO_LOGIN_USER_FLAG = "ENABLE_USER_AUTO_LOGIN";
+const AUTO_LOGIN_FLAG_NAMES = [
+  AUTO_LOGIN_MASTER_FLAG,
+  AUTO_LOGIN_ADMIN_FLAG,
+  AUTO_LOGIN_USER_FLAG,
+];
 
 const CLIENT_DIST_DIR = path.resolve(__dirname, "..", "..", "client", "dist");
 const CLIENT_DIST_INDEX = path.join(CLIENT_DIST_DIR, "index.html");
@@ -55,7 +63,43 @@ async function ensureDbConfigured(res) {
   return true;
 }
 
-app.use(helmet());
+function buildCspHeader(nonce) {
+  if (!isProduction) {
+    return [
+      "default-src 'self'",
+      "base-uri 'self'",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' http: https:",
+      "style-src 'self' 'unsafe-inline' https:",
+      "img-src 'self' data: https:",
+      "font-src 'self' data: https:",
+      "connect-src 'self' http: https: ws: wss:",
+      "frame-ancestors 'self'",
+      "object-src 'none'",
+    ].join("; ");
+  }
+  const directives = [
+    "default-src 'self'",
+    "base-uri 'self'",
+    `script-src 'self' 'nonce-${nonce}'`,
+    `style-src 'self' 'nonce-${nonce}' https:`,
+    "img-src 'self' data: https:",
+    "font-src 'self' data: https:",
+    "connect-src 'self' https: http: ws: wss:",
+    "frame-ancestors 'self'",
+    "object-src 'none'",
+  ];
+  return directives.join("; ");
+}
+
+app.use((req, res, next) => {
+  res.locals.cspNonce = crypto.randomBytes(16).toString("base64");
+  next();
+});
+app.use(helmet({ contentSecurityPolicy: false }));
+app.use((req, res, next) => {
+  res.setHeader("Content-Security-Policy", buildCspHeader(res.locals.cspNonce));
+  next();
+});
 app.use(cors({ origin: config.corsOrigin, credentials: true }));
 app.use(express.json());
 app.use("/api", (req, res, next) => {
@@ -114,6 +158,75 @@ function mixWithBlack(hex, intensity) {
   return `rgb(${mixed.join(",")})`;
 }
 
+async function loadFeatureFlags(flagNames) {
+  if (!flagNames?.length || !config.db.server) return {};
+  const pool = await db.getPool();
+  const request = pool.request();
+  const placeholders = flagNames.map((flagName, index) => {
+    const key = `flag_${index}`;
+    request.input(key, flagName);
+    return `@${key}`;
+  });
+  const result = await request.query(`
+    IF OBJECT_ID('dbo.vw_feature_flags','V') IS NOT NULL
+      SELECT flag_name, enabled
+      FROM dbo.vw_feature_flags
+      WHERE flag_name IN (${placeholders.join(", ")})
+    ELSE
+      SELECT flag_name, enabled
+      FROM dbo.tbl_feature_flags
+      WHERE flag_name IN (${placeholders.join(", ")})
+  `);
+  return result.recordset.reduce((acc, row) => {
+    acc[row.flag_name] = Boolean(row.enabled);
+    return acc;
+  }, {});
+}
+
+async function resolveAutoLoginTarget() {
+  const flags = await loadFeatureFlags(AUTO_LOGIN_FLAG_NAMES);
+  if (!flags[AUTO_LOGIN_MASTER_FLAG]) return null;
+  if (flags[AUTO_LOGIN_ADMIN_FLAG]) {
+    return { email: config.autoLoginAdminEmail, type: "admin" };
+  }
+  if (flags[AUTO_LOGIN_USER_FLAG]) {
+    return { email: config.autoLoginUserEmail, type: "user" };
+  }
+  return null;
+}
+
+async function ensureAutoLoginSession(req, res) {
+  const target = await resolveAutoLoginTarget();
+  if (!target?.email) return null;
+  const pool = await db.getPool();
+  const request = pool.request();
+  request.input("email", target.email.trim().toLowerCase());
+  const result = await request.query(`
+    SELECT TOP 1 user_id,
+                 username,
+                 email,
+                 voornaam,
+                 achternaam,
+                 role,
+                 is_super_admin
+    FROM dbo.tbl_users
+    WHERE email = @email
+  `);
+  const user = result.recordset[0];
+  if (!user) return null;
+
+  const sessionId = await auth.createSessionForUser(user.user_id);
+  const cookieValue = auth.createSignedSession(sessionId);
+  res.cookie(auth.SESSION_COOKIE, cookieValue, auth.buildSessionCookieOptions());
+  if (config.csrfEnabled && !readCookie(req, CSRF_COOKIE)) {
+    setCsrfCookie(res, crypto.randomBytes(24).toString("base64url"));
+  }
+  const update = pool.request();
+  update.input("user_id", user.user_id);
+  await update.query("UPDATE dbo.tbl_users SET last_login = SYSDATETIME() WHERE user_id = @user_id");
+  return { sessionId, user, type: target.type };
+}
+
 async function fetchUserSettings(userId) {
   const pool = await db.getPool();
   const request = pool.request();
@@ -156,10 +269,16 @@ async function buildBootstrap(req, res) {
   try {
     const session = await auth.getSessionUser(req);
     if (!session?.user) {
-      return bootstrap;
+      const autoSession = await ensureAutoLoginSession(req, res);
+      if (!autoSession?.user) {
+        return bootstrap;
+      }
+      req.user = autoSession.user;
+      req.sessionId = autoSession.sessionId;
+    } else {
+      req.user = session.user;
+      req.sessionId = session.sessionId;
     }
-
-    req.user = session.user;
     if (config.csrfEnabled && !readCookie(req, CSRF_COOKIE)) {
       setCsrfCookie(res, crypto.randomBytes(24).toString("base64url"));
     }
@@ -191,7 +310,8 @@ async function buildBootstrap(req, res) {
   }
 }
 
-function buildBootstrapMarkup(bootstrap) {
+function buildBootstrapMarkup(bootstrap, nonce) {
+  const nonceAttr = nonce ? ` nonce="${nonce}"` : "";
   const theme = bootstrap?.themeSettings?.theme || DEFAULT_SETTINGS.theme;
   const accentColor = normalizeHex(
     bootstrap?.themeSettings?.accentColor,
@@ -210,7 +330,7 @@ function buildBootstrapMarkup(bootstrap) {
   const themeJson = JSON.stringify(theme);
 
   return `
-    <style id="bootstrap-theme">
+    <style id="bootstrap-theme"${nonceAttr}>
       :root {
         --accent-color: ${accentColor};
         --accent-color-rgb: ${accentRgb.join(",")};
@@ -219,7 +339,7 @@ function buildBootstrapMarkup(bootstrap) {
         --sidebar-accent-second: ${sidebarAccentSecond};
       }
     </style>
-    <script>
+    <script${nonceAttr}>
       window.__BOOTSTRAP__ = ${bootstrapJson};
       (function () {
         var theme = ${themeJson};
@@ -1156,12 +1276,20 @@ app.get("/api/feature-flags", requireAuth, requirePermission("/feature-flags*"),
   try {
     const pool = await db.getPool();
     const result = await pool.request().query(`
-      SELECT flag_name,
-             enabled,
-             page_key,
-             description
-      FROM dbo.tbl_feature_flags
-      ORDER BY page_key, flag_name
+      IF OBJECT_ID('dbo.vw_feature_flags','V') IS NOT NULL
+        SELECT flag_name,
+               enabled,
+               page_key,
+               description
+        FROM dbo.vw_feature_flags
+        ORDER BY page_key, flag_name
+      ELSE
+        SELECT flag_name,
+               enabled,
+               page_key,
+               description
+        FROM dbo.tbl_feature_flags
+        ORDER BY page_key, flag_name
     `);
     const rows = result.recordset.map((row) => ({
       id: row.flag_name,
@@ -1226,6 +1354,66 @@ app.post("/api/feature-flags/save", requireAuth, requirePermission("/feature-fla
   }
 });
 
+app.get(/^\/auto_log=?([12])=(true|false)$/i, async (req, res) => {
+  if (!(await ensureDbConfigured(res))) return;
+  try {
+    const flagIndex = req.params?.[0];
+    const enabledRaw = req.params?.[1];
+    const flagMap = {
+      1: AUTO_LOGIN_ADMIN_FLAG,
+      2: AUTO_LOGIN_USER_FLAG,
+    };
+    const flagName = flagMap[Number(flagIndex)];
+    if (!flagName) {
+      return res.status(400).json({ error: "Invalid auto login flag." });
+    }
+
+    const flags = await loadFeatureFlags([AUTO_LOGIN_MASTER_FLAG]);
+    if (!flags[AUTO_LOGIN_MASTER_FLAG]) {
+      return res.status(403).json({ error: "Auto logins are disabled." });
+    }
+
+    const enabled = String(enabledRaw).toLowerCase() === "true";
+    const pool = await db.getPool();
+    const request = pool.request();
+    request.input("flag_name", flagName);
+    request.input("enabled", enabled ? 1 : 0);
+    await request.query(`
+      IF EXISTS (SELECT 1 FROM dbo.tbl_feature_flags WHERE flag_name = @flag_name)
+        UPDATE dbo.tbl_feature_flags
+        SET enabled = @enabled, updated_at = SYSDATETIME()
+        WHERE flag_name = @flag_name
+      ELSE
+        INSERT INTO dbo.tbl_feature_flags (flag_name, enabled, page_key, description, updated_at)
+        VALUES (@flag_name, @enabled, 'SYSTEM', 'Auto-login toggled via special link', SYSDATETIME())
+    `);
+
+    if (enabled) {
+      const otherFlag = flagName === AUTO_LOGIN_ADMIN_FLAG ? AUTO_LOGIN_USER_FLAG : AUTO_LOGIN_ADMIN_FLAG;
+      const disableOther = pool.request();
+      disableOther.input("flag_name", otherFlag);
+      await disableOther.query(`
+        UPDATE dbo.tbl_feature_flags
+        SET enabled = 0, updated_at = SYSDATETIME()
+        WHERE flag_name = @flag_name
+      `);
+    }
+
+    const acceptsJson = (req.headers.accept || "").includes("application/json");
+    if (acceptsJson) {
+      return res.json({ success: true, flag: flagName, enabled });
+    }
+    const target = VITE_ORIGIN || "/";
+    return res.redirect(target);
+  } catch (error) {
+    const payload = { error: "Failed to update auto login flag." };
+    if (!isProduction) {
+      payload.detail = error?.message || String(error);
+    }
+    return res.status(500).json(payload);
+  }
+});
+
 if (fs.existsSync(CLIENT_DIST_DIR)) {
   app.use(express.static(CLIENT_DIST_DIR));
 }
@@ -1241,6 +1429,11 @@ if (!isProduction && VITE_ORIGIN) {
 }
 
 app.get(/^(?!\/api).*/, async (req, res) => {
+  if (!isProduction && VITE_ORIGIN) {
+    const redirectUrl = new URL(req.originalUrl, VITE_ORIGIN);
+    res.redirect(redirectUrl.toString());
+    return;
+  }
   const indexPath = fs.existsSync(CLIENT_DIST_INDEX) ? CLIENT_DIST_INDEX : CLIENT_DEV_INDEX;
   if (!fs.existsSync(indexPath)) {
     res.status(404).send("Client index not found.");
@@ -1250,8 +1443,11 @@ app.get(/^(?!\/api).*/, async (req, res) => {
   try {
     const template = fs.readFileSync(indexPath, "utf-8");
     const bootstrap = await buildBootstrap(req, res);
-    const markup = buildBootstrapMarkup(bootstrap);
-    const html = template.replace("<!-- APP_BOOTSTRAP -->", markup);
+    const nonce = isProduction ? res.locals.cspNonce : null;
+    const markup = buildBootstrapMarkup(bootstrap, nonce);
+    const html = template
+      .replace("<!-- APP_BOOTSTRAP -->", markup)
+      .replace(/__CSP_NONCE__/g, nonce || "");
     res.setHeader("Content-Type", "text/html");
     res.send(html);
   } catch (error) {

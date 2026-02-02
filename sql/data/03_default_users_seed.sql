@@ -71,6 +71,24 @@ WHEN NOT MATCHED THEN
     VALUES (source.username, source.email, source.password_hash, source.role, source.is_super_admin, GETDATE());
 GO
 
+-- Create standard auto-login user
+-- Password: admin123 (scrypt hashed)
+MERGE tbl_users AS target
+USING (VALUES 
+    ('EESA_USER', 'eesa@user.local', 'scrypt:32768:8:1$HK5uJI3xDTXlq4xf$5d5c9bccf547366d8bf67326675137631a801fd4bcc90df3a5cc7b394b2867f9acbf056d01863b0c598439096ac00bd0ae6f3bd7d1f56375df66f5b1a8fde672', 'user', 0)
+) AS source (username, email, password_hash, role, is_super_admin)
+ON target.email = source.email
+WHEN MATCHED THEN
+    UPDATE SET 
+        username = source.username,
+        password_hash = source.password_hash,
+        role = source.role,
+        is_super_admin = source.is_super_admin
+WHEN NOT MATCHED THEN
+    INSERT (username, email, password_hash, role, is_super_admin, created_at)
+    VALUES (source.username, source.email, source.password_hash, source.role, source.is_super_admin, GETDATE());
+GO
+
 -- Link standard account to admin role if available
 IF EXISTS (SELECT 1 FROM dbo.tbl_users WHERE email = 'eesa@local.admin')
 BEGIN
@@ -82,6 +100,21 @@ BEGIN
     BEGIN
         IF NOT EXISTS (SELECT 1 FROM dbo.tbl_user_roles WHERE user_id = @eesa_id AND role_id = @admin_role_id)
             INSERT INTO dbo.tbl_user_roles (user_id, role_id) VALUES (@eesa_id, @admin_role_id);
+    END
+END
+GO
+
+-- Link auto-login user to user role if available
+IF EXISTS (SELECT 1 FROM dbo.tbl_users WHERE email = 'eesa@user.local')
+BEGIN
+    DECLARE @eesa_user_id INT = (SELECT TOP 1 user_id FROM dbo.tbl_users WHERE email = 'eesa@user.local');
+    DECLARE @user_role_id INT = (
+        SELECT TOP 1 id FROM dbo.tbl_roles WHERE naam IN ('user','User') ORDER BY CASE WHEN naam = 'user' THEN 0 ELSE 1 END
+    );
+    IF @user_role_id IS NOT NULL
+    BEGIN
+        IF NOT EXISTS (SELECT 1 FROM dbo.tbl_user_roles WHERE user_id = @eesa_user_id AND role_id = @user_role_id)
+            INSERT INTO dbo.tbl_user_roles (user_id, role_id) VALUES (@eesa_user_id, @user_role_id);
     END
 END
 GO
