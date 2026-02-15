@@ -32,11 +32,8 @@
 /* ===== COLLAPSED STATE ===== */
 .sidebar.collapsed {
   width: 70px;
-  overflow-y: auto !important;
+  overflow: hidden;
 }
-
-/* Zorg dat tooltips buiten de sidebar zichtbaar kunnen zijn */
-.sidebar.collapsed { overflow-x: visible; }
 
 /* Text hiding strategy: avoid layout thrash & flicker */
 .sidebar.text-hidden .menu-text,
@@ -338,12 +335,15 @@
   border-top: 1px solid var(--sidebar-hover);
 }
 
-/* Collapsed state dropdown positioning */
+/* Collapsed state dropdown positioning – uses position:fixed via JS */
 .sidebar.collapsed .profile-dropdown {
-  left: calc(100% + 10px);
   right: auto;
-  bottom: 0;
   min-width: 180px;
+}
+
+/* Hide user-details in collapsed state */
+.sidebar.collapsed .user-details {
+  display: none;
 }
 
 .sidebar .user-name {

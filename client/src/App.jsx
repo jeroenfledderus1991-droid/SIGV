@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { NavLink, Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import Dashboard from "./pages/Dashboard.jsx";
 import Accountbeheer from "./pages/Accountbeheer.jsx";
@@ -54,6 +54,8 @@ function App() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [authRouteUser, setAuthRouteUser] = useState(null);
+  const profileBtnRef = useRef(null);
+  const [dropdownStyle, setDropdownStyle] = useState({});
   const location = useLocation();
   const navigate = useNavigate();
   const isAuthRoute = useMemo(() => {
@@ -140,6 +142,20 @@ function App() {
   useEffect(() => {
     setProfileOpen(false);
   }, [location.pathname]);
+
+  useEffect(() => {
+    if (profileOpen && collapsed && profileBtnRef.current) {
+      const rect = profileBtnRef.current.getBoundingClientRect();
+      setDropdownStyle({
+        position: "fixed",
+        left: rect.right + 10,
+        bottom: window.innerHeight - rect.bottom,
+        minWidth: 180,
+      });
+    } else {
+      setDropdownStyle({});
+    }
+  }, [profileOpen, collapsed]);
 
   useEffect(() => {
     let mounted = true;
@@ -247,6 +263,7 @@ function App() {
         <div className="sidebar-footer">
           <div className="user-profile-container">
             <button
+              ref={profileBtnRef}
               className="user-info"
               type="button"
               onClick={() => setProfileOpen((open) => !open)}
@@ -260,7 +277,11 @@ function App() {
               </div>
             </button>
             {profileOpen && (
-              <div className="profile-dropdown" role="menu">
+              <div
+                className="profile-dropdown"
+                role="menu"
+                style={collapsed ? dropdownStyle : undefined}
+              >
                 {enableUserProfile && isAllowedPath("/profiel") && (
                   <NavLink
                     to="/profiel"
