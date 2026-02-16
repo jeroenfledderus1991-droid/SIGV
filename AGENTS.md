@@ -9,6 +9,19 @@ This file captures the local rules and patterns for this template. Keep changes 
 - Reuse existing UI patterns (ClientTable, modal patterns, layout) instead of custom one-off markup.
 - Configure everything via the root `.env`. Do not hardcode secrets or ports.
 
+## Size and modularity rules
+- Keep files compact and focused. Prefer many small modules over one large "god file".
+- Soft limits:
+  - React pages/components/hooks: aim for <= 250 lines.
+  - CSS modules: aim for <= 200 lines.
+  - Service/helpers: aim for <= 300 lines.
+- Hard review threshold: if a file grows beyond ~400 lines, split it unless there is a clear architectural reason.
+- Group styles by concern:
+  - Shared styles in `client/src/styles/components.css`, `layout.css`, etc.
+  - Page-specific styles in `client/src/styles/pages/*.css`.
+  - Keep `client/src/styles/pages.css` as import hub only.
+- For any new feature, create/extend focused files instead of appending large sections to existing monolith files.
+
 ## Project map
 - React (Vite): `client/`
 - Express API: `server/src/index.js`

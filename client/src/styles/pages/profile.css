@@ -1,0 +1,110 @@
+.profile-page {
+    display: flex;
+    justify-content: center;
+}
+
+.profile-card {
+    width: 100%;
+    max-width: 820px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 14px;
+    box-shadow: var(--shadow-sm);
+    padding: 26px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.profile-card hr {
+    border: none;
+    border-top: 1px solid var(--border-color-light);
+    margin: 0;
+}
+
+.profile-info {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 24px;
+}
+
+.profile-info .info-group label {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+    display: block;
+}
+
+.profile-info .info-group p {
+    font-size: 1.05rem;
+    margin: 0;
+    font-weight: 600;
+}
+
+.profile-section {
+    background: var(--bg-tertiary);
+    padding: 20px;
+    border-radius: 12px;
+    border: 1px solid var(--border-color-light);
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.profile-section h5 {
+    margin: 0;
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--text-primary);
+}
+
+.profile-section form {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.profile-section .btn {
+    align-self: flex-start;
+}
+
+.profile-alert {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px 14px;
+    border-radius: 10px;
+    background: color-mix(in srgb, var(--warning-color) 15%, var(--bg-secondary));
+    border: 1px solid color-mix(in srgb, var(--warning-color) 40%, var(--border-color));
+    color: var(--warning-color);
+    font-size: 0.85rem;
+}
+
+.profile-toast {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    border-radius: 12px;
+    box-shadow: var(--shadow-md);
+    z-index: 1200;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    font-size: 0.9rem;
+    color: var(--text-primary);
+}
+
+.profile-toast.success {
+    border-color: color-mix(in srgb, var(--success-color) 60%, var(--border-color));
+    color: var(--success-color);
+}
+
+.profile-toast.error {
+    border-color: color-mix(in srgb, var(--danger-color) 60%, var(--border-color));
+    color: var(--danger-color);
+}

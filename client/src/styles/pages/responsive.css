@@ -1,0 +1,48 @@
+@media (max-width: 768px) {
+    .login-container {
+        margin: var(--margin-lg);
+        padding: calc(var(--padding-lg) * 1.5) var(--padding-lg);
+    }
+
+    .dashboard-page .stats-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .accounts-page .role-form {
+        flex-direction: column;
+        align-items: stretch;
+        gap: var(--margin-sm);
+    }
+
+    .roles-matrix .matrix-table {
+        font-size: calc(var(--font-size-sm) * 0.85);
+    }
+
+    .settings-page .settings-container {
+        padding: 10px;
+    }
+
+    .settings-page .settings-row {
+        grid-template-columns: 1fr;
+        gap: 15px;
+    }
+
+    .settings-page .options-grid {
+        grid-template-columns: repeat(auto-fit, minmax(70px, 1fr));
+    }
+
+    .auth-card {
+        padding: 35px 25px;
+        margin: 15px;
+    }
+
+    .auth-title {
+        font-size: 26px;
+    }
+
+    .auth-logo-circle {
+        width: 75px;
+        height: 75px;
+        font-size: 34px;
+    }
+}

@@ -1,25 +1,35 @@
-Ik heb een complete template opgezet met gescheiden front-end, Node/Express API en .NET API, inclusief een UI met profielpagina, instellingenknop en een sidebar die je verticaal of horizontaal kunt schakelen. Secrets worden uit de root .env geladen in zowel Node als .NET.
+# Build Prompt Guide (Template)
 
-Wat er is toegevoegd/aangepast
+Use this prompt baseline when extending this template with AI tooling.
 
-React UI met sidebar-orientatie toggle, profielpagina en instellingenknop in App.jsx
-UI styling met custom fonts, gradient background en animaties in App.css en index.css
-Express API met security middleware en .env-config in index.js en config.js
-.NET API endpoints en .env-loading in Program.cs
-Voorbeeldconfig in .env.example en ignore-regels in .gitignore
-Startinstructies in README.md
-Belangrijke details
+## Core constraints
+- Keep changes small, modular, and reviewable.
+- Do not create large mixed-responsibility files.
+- Reuse existing patterns before introducing new abstractions.
 
-config.js leest automatisch .env (ook als je vanuit root of vanuit server/ start)
-Program.cs probeert .env in huidige map en parent folders en laadt die met DotNetEnv
-Vite proxy staat op /api naar Express via vite.config.js
-Als je wil draaien
+## Stack-specific rules
+- React client:
+  - Use API helpers from `client/src/api.js` (`getJson`, `postJson`, `putJson`, `deleteJson`).
+  - Keep page-specific styles in `client/src/styles/pages/*.css`.
+  - Keep `client/src/styles/pages.css` as import hub only.
+- Express API:
+  - Protect authenticated routes with `requireAuth`.
+  - Apply `requirePermission("/feature*")` where relevant.
+  - Read via `vw_*` objects and write via `tbl_*` objects.
+  - Use parameterized SQL only.
+- Config:
+  - Use root `.env`; do not hardcode credentials, ports, or secrets.
 
-Front-end: cd client && npm run dev
-Express: cd server && npm run dev
-.NET: cd dotnet/TemplateApi && dotnet run
-Volgende stappen (kies wat je wilt)
+## File size guardrails
+- React pages/components/hooks: target <= 250 lines.
+- CSS module files: target <= 200 lines.
+- Services/helpers: target <= 300 lines.
+- If a file approaches 400+ lines, split it into focused modules.
 
-Wil je dat ik ook auth (JWT + Microsoft login flow) in Express en/of .NET toevoeg?
-Zal ik een database clientlaag toevoegen (bijv. MSSQL in Node en EF Core in .NET) met voorbeeldqueries?
-Wil je een monorepo startscript (bijv. npm/pnpm workspace of concurrent start) zodat alles in 1 command start?
+## Delivery checklist per feature
+1. Add/adjust DB table + view (if data model changes).
+2. Add secured API endpoints.
+3. Register permission pattern and matching nav permission.
+4. Add React page + route.
+5. Keep styles modular under `client/src/styles/pages/`.
+6. Validate auth flow, permissions, and CRUD behavior.

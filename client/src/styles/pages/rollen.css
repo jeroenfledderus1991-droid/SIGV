@@ -1,0 +1,20 @@
+.roles-matrix .matrix-table {
+    font-size: var(--font-size-sm);
+}
+
+.roles-matrix .matrix-table th {
+    text-align: center;
+    padding: var(--padding-sm);
+    font-size: calc(var(--font-size-sm) * 0.9);
+}
+
+.roles-matrix .matrix-table td {
+    text-align: center;
+    padding: calc(var(--padding-sm) * 0.75);
+}
+
+.roles-matrix .permission-checkbox {
+    transform: scale(1.2);
+    accent-color: var(--accent-color);
+    cursor: pointer;
+}

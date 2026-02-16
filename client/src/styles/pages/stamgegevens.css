@@ -1,0 +1,42 @@
+.stamgegevens-page .category-tabs {
+    background-color: var(--bg-secondary);
+    border-radius: var(--border-radius) var(--border-radius) 0 0;
+    border-bottom: 2px solid color-mix(in srgb,var(--accent-color) 35%, var(--border-color));
+}
+
+.stamgegevens-page .tab-content {
+    background-color: var(--bg-secondary);
+    border-radius: 0 0 var(--border-radius) var(--border-radius);
+    padding: var(--padding-lg);
+    border: 1px solid color-mix(in srgb,var(--accent-color) 25%, var(--border-color));
+    border-top: none;
+}
+
+.stamgegevens-page .category-tabs .tab-btn,
+.stamgegevens-page .category-tabs button,
+.category-tabs .tab-btn {
+    background: transparent;
+    border: none;
+    padding: var(--padding-sm) var(--padding-md);
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+    color: color-mix(in srgb,var(--accent-color) 60%, var(--text-secondary));
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+    transition: color .25s, border-color .25s, background .25s;
+}
+
+.stamgegevens-page .category-tabs .tab-btn:hover,
+.stamgegevens-page .category-tabs button:hover,
+.category-tabs .tab-btn:hover {
+    color: var(--accent-color);
+    background: color-mix(in srgb,var(--accent-color) 8%, transparent);
+}
+
+.stamgegevens-page .category-tabs .tab-btn.active,
+.stamgegevens-page .category-tabs button.active,
+.category-tabs .tab-btn.active {
+    color: var(--accent-color);
+    border-bottom-color: var(--accent-color);
+    background: color-mix(in srgb,var(--accent-color) 12%, transparent);
+}

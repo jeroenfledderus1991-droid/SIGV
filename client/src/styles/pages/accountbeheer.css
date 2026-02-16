@@ -1,0 +1,16 @@
+.accounts-page .table td {
+    vertical-align: middle;
+    padding: var(--padding-md);
+}
+
+.accounts-page .role-form {
+    display: flex;
+    align-items: center;
+    gap: var(--margin-sm);
+    margin: 0;
+}
+
+.accounts-page .role-form .form-select {
+    min-width: 120px;
+    font-size: var(--font-size-sm);
+}

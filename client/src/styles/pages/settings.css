@@ -1,0 +1,291 @@
+.settings-page .settings-container {
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 15px;
+}
+
+.settings-page .settings-card {
+    background: var(--bg-secondary);
+    border-radius: 8px;
+    box-shadow: var(--shadow-sm);
+    padding: 20px;
+    border: 1px solid var(--border-color);
+}
+
+.settings-page .settings-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+.settings-page .setting-group {
+    background: var(--bg-tertiary);
+    border-radius: 6px;
+    padding: 15px;
+    border: 1px solid var(--border-color-light);
+}
+
+.settings-page .setting-group.full-width {
+    grid-column: 1 / -1;
+}
+
+.settings-page .setting-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.settings-page .setting-header.compact {
+    margin: 0;
+}
+
+.settings-page .setting-icon {
+    font-size: 1.2rem;
+    color: var(--accent-color);
+}
+
+.settings-page .setting-title {
+    font-weight: 600;
+    color: var(--text-primary);
+    font-size: 1rem;
+    margin: 0;
+}
+
+.settings-page .setting-description {
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    margin-bottom: 12px;
+    line-height: 1.4;
+}
+
+.settings-page .setting-description.compact {
+    margin-top: -4px;
+}
+
+.settings-page .options-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+    gap: 8px;
+}
+
+.settings-page .option-card {
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 10px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    background: var(--bg-secondary);
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+}
+
+.settings-page .option-card:hover {
+    border-color: var(--accent-color);
+    background: var(--bg-primary);
+    transform: translateY(-1px);
+}
+
+.settings-page .option-card.active {
+    border-color: var(--accent-color);
+    background: var(--accent-color);
+    color: #ffffff;
+    box-shadow: var(--shadow-sm);
+}
+
+.settings-page .option-card.active .option-icon,
+.settings-page .option-card.active .option-title {
+    color: #ffffff;
+}
+
+.settings-page .option-icon {
+    font-size: 1.3rem;
+    color: var(--accent-color);
+}
+
+.settings-page .option-title {
+    font-weight: 500;
+    color: var(--text-primary);
+    font-size: 0.8rem;
+}
+
+.settings-page .theme-demo,
+.settings-page .display-demo {
+    margin-top: 8px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    text-align: center;
+    border: 1px solid var(--border-color-light);
+    background: var(--bg-primary);
+}
+
+.settings-page .theme-demo.light-demo {
+    background: #ffffff;
+    color: #333333;
+    border-color: #e9ecef;
+}
+
+.settings-page .theme-demo.dark-demo {
+    background: #2d2d2d;
+    color: #e2e8f0;
+    border-color: #4a5568;
+}
+
+.settings-page .theme-demo.auto-demo {
+    background: linear-gradient(45deg, #ffffff 50%, #2d2d2d 50%);
+    color: #666666;
+    border-color: #999999;
+}
+
+.settings-page .display-demo.compact-demo {
+    padding: 2px 6px;
+    font-size: 0.65rem;
+}
+
+.settings-page .accent-row {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    flex-wrap: wrap;
+}
+
+.settings-page .accent-color-picker {
+    width: 54px;
+    height: 54px;
+    padding: 0;
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    cursor: pointer;
+    background: #ffffff;
+}
+
+.settings-page .accent-inputs {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.settings-page .accent-input-row {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+
+.settings-page .accent-hex-input {
+    width: 110px;
+    padding: 6px 8px;
+    font-size: 0.8rem;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+}
+
+.settings-page .accent-help {
+    font-size: 11px;
+    color: var(--text-secondary);
+}
+
+.settings-page .setting-divider {
+    height: 1px;
+    background: var(--border-color-light);
+    margin: 18px 0;
+    opacity: 0.4;
+}
+
+.settings-page .gradient-container {
+    margin-top: 16px;
+}
+
+.settings-page .gradient-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.settings-page .gradient-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.settings-page .gradient-value {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--accent-color);
+    background: color-mix(in srgb, var(--accent-color) 12%, white);
+    padding: 3px 10px;
+    border-radius: 6px;
+}
+
+.settings-page .gradient-slider {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 8px;
+    border-radius: 4px;
+    outline: none;
+    cursor: pointer;
+    background: linear-gradient(90deg, var(--accent-color) 0%, #000000 100%);
+}
+
+.settings-page .gradient-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--accent-color);
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.settings-page .gradient-slider::-webkit-slider-thumb:hover {
+    transform: scale(1.1);
+    box-shadow: 0 3px 8px rgba(0,0,0,0.3);
+}
+
+.settings-page .gradient-slider::-moz-range-thumb {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--accent-color);
+    cursor: pointer;
+    border: none;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.settings-page .gradient-slider::-moz-range-thumb:hover {
+    transform: scale(1.1);
+    box-shadow: 0 3px 8px rgba(0,0,0,0.3);
+}
+
+.settings-page .gradient-scale {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 4px;
+    font-size: 11px;
+    color: var(--text-secondary);
+}
+
+.settings-page .save-section {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 15px;
+    border-top: 1px solid var(--border-color-light);
+    margin-top: 15px;
+}
+
+.settings-page .status-text {
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+}

@@ -158,10 +158,6 @@ export default function Settings() {
 
           <div className="save-section">
             <span className="status-text">Wijzigingen worden automatisch opgeslagen</span>
-            <button type="button" className="save-button" disabled>
-              <i className="fas fa-save" />
-              Opslaan
-            </button>
           </div>
         </div>
       </div>

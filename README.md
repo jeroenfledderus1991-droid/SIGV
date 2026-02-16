@@ -66,3 +66,16 @@ dotnet run
 - Express reads the root `.env` automatically.
 - .NET loads the root `.env` at startup using DotNetEnv.
 - Configure CORS with `CORS_ORIGIN` when front-end and APIs run on different ports.
+
+## Engineering Standards
+- Keep code compact and modular. Avoid large, mixed-responsibility files.
+- Recommended size targets:
+  - React pages/components/hooks: <= 250 lines.
+  - CSS module files: <= 200 lines.
+  - Services/helpers: <= 300 lines.
+- Review threshold:
+  - Around 400+ lines in one file means the file should usually be split.
+- CSS organization:
+  - Use `client/src/styles/pages.css` only as an import hub.
+  - Put page-level styles in `client/src/styles/pages/*.css`.
+  - Keep shared primitives in existing shared styles (`components.css`, `layout.css`, `themes.css`).
