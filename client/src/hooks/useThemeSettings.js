@@ -23,8 +23,9 @@ function hexToRgb(hex) {
 
 function mixWithBlack(hex, intensity) {
   const ratio = clamp(intensity, 0, 100) / 100;
+  const boosted = Math.pow(ratio, 0.65);
   const [r, g, b] = hexToRgb(hex);
-  const mixed = [r, g, b].map((value) => Math.round(value * (1 - ratio)));
+  const mixed = [r, g, b].map((value) => Math.round(value * (1 - boosted)));
   return `rgb(${mixed.join(",")})`;
 }
 

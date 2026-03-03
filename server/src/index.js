@@ -40,6 +40,9 @@ const DEFAULT_SETTINGS = {
 const AUTO_LOGIN_MASTER_FLAG = "ENABLE_AUTO_LOGINS";
 const AUTO_LOGIN_ADMIN_FLAG = "ENABLE_ADMIN_AUTO_LOGIN";
 const AUTO_LOGIN_USER_FLAG = "ENABLE_USER_AUTO_LOGIN";
+const SIDEBAR_HEADER_WHITE_FLAG = "ENABLE_SIDEBAR_HEADER_WHITE";
+const SUPER_ADMIN_ROLE_NAME = "Super Admin";
+const EESA_SUPER_ADMIN_EMAIL = "eesa@admin.local";
 const AUTO_LOGIN_FLAG_NAMES = [
   AUTO_LOGIN_MASTER_FLAG,
   AUTO_LOGIN_ADMIN_FLAG,
@@ -153,8 +156,9 @@ function hexToRgb(hex) {
 
 function mixWithBlack(hex, intensity) {
   const ratio = clamp(intensity, 0, 100) / 100;
+  const boosted = Math.pow(ratio, 0.65);
   const [r, g, b] = hexToRgb(hex);
-  const mixed = [r, g, b].map((value) => Math.round(value * (1 - ratio)));
+  const mixed = [r, g, b].map((value) => Math.round(value * (1 - boosted)));
   return `rgb(${mixed.join(",")})`;
 }
 
@@ -172,15 +176,34 @@ async function loadFeatureFlags(flagNames) {
       SELECT flag_name, enabled
       FROM dbo.vw_feature_flags
       WHERE flag_name IN (${placeholders.join(", ")})
-    ELSE
+    ELSE IF OBJECT_ID('dbo.tbl_feature_flags','U') IS NOT NULL
       SELECT flag_name, enabled
       FROM dbo.tbl_feature_flags
       WHERE flag_name IN (${placeholders.join(", ")})
+    ELSE
+      SELECT CAST(NULL AS NVARCHAR(120)) AS flag_name, CAST(0 AS BIT) AS enabled WHERE 1 = 0
   `);
   return result.recordset.reduce((acc, row) => {
     acc[row.flag_name] = Boolean(row.enabled);
     return acc;
   }, {});
+}
+
+async function buildAppFeatureFlags() {
+  const defaults = {
+    enableUserSettings: process.env.FEATURE_ENABLE_USER_SETTINGS === "1",
+    enableUserProfile: process.env.FEATURE_ENABLE_USER_PROFILE !== "0",
+    sidebarHeaderWhite: false,
+  };
+  try {
+    const flags = await loadFeatureFlags([SIDEBAR_HEADER_WHITE_FLAG]);
+    return {
+      ...defaults,
+      sidebarHeaderWhite: Boolean(flags[SIDEBAR_HEADER_WHITE_FLAG]),
+    };
+  } catch {
+    return defaults;
+  }
 }
 
 async function resolveAutoLoginTarget() {
@@ -238,12 +261,10 @@ async function fetchUserSettings(userId) {
 }
 
 async function buildBootstrap(req, res) {
+  const featureFlags = await buildAppFeatureFlags();
   const appSettings = {
     sidebarOrientation: "vertical",
-    featureFlags: {
-      enableUserSettings: process.env.FEATURE_ENABLE_USER_SETTINGS === "1",
-      enableUserProfile: process.env.FEATURE_ENABLE_USER_PROFILE !== "0",
-    },
+    featureFlags,
     hasMicrosoftClient: Boolean(config.microsoft.clientId),
   };
 
@@ -452,6 +473,34 @@ function matchPattern(pattern, path) {
   return path === pattern;
 }
 
+function normalizeEmail(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase();
+}
+
+function isEesaSuperAdminEmail(value) {
+  return normalizeEmail(value) === EESA_SUPER_ADMIN_EMAIL;
+}
+
+function isSuperAdminRoleName(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase() === SUPER_ADMIN_ROLE_NAME.toLowerCase();
+}
+
+async function getSuperAdminRoleId(pool) {
+  const request = pool.request();
+  request.input("role_name", SUPER_ADMIN_ROLE_NAME);
+  const result = await request.query(`
+    SELECT TOP 1 id
+    FROM dbo.tbl_roles
+    WHERE LOWER(naam) = LOWER(@role_name)
+    ORDER BY id
+  `);
+  return Number(result.recordset[0]?.id) || null;
+}
+
 async function loadPermissions(req) {
   if (req.permissions) return req.permissions;
   if (req.user?.is_super_admin) {
@@ -460,23 +509,37 @@ async function loadPermissions(req) {
   }
 
   const pool = await db.getPool();
+  const roleSourceCte = `
+    WITH user_role_ids AS (
+      SELECT ur.role_id
+      FROM dbo.tbl_user_roles ur
+      WHERE ur.user_id = @user_id
+      UNION
+      SELECT r.id AS role_id
+      FROM dbo.tbl_users u
+      JOIN dbo.tbl_roles r ON LOWER(r.naam) = LOWER(ISNULL(u.role, ''))
+      WHERE u.user_id = @user_id
+    )
+  `;
+
   const rolesRequest = pool.request();
   rolesRequest.input("user_id", req.user.user_id);
   const rolesResult = await rolesRequest.query(`
+    ${roleSourceCte}
     SELECT DISTINCT r.naam
-    FROM dbo.tbl_user_roles ur
-    JOIN dbo.tbl_roles r ON r.id = ur.role_id
-    WHERE ur.user_id = @user_id
+    FROM user_role_ids src
+    JOIN dbo.tbl_roles r ON r.id = src.role_id
   `);
   const roles = rolesResult.recordset.map((row) => row.naam);
 
   const permRequest = pool.request();
   permRequest.input("user_id", req.user.user_id);
   const permResult = await permRequest.query(`
+    ${roleSourceCte}
     SELECT DISTINCT rp.page
-    FROM dbo.tbl_user_roles ur
-    JOIN dbo.tbl_role_permissions rp ON rp.role_id = ur.role_id
-    WHERE ur.user_id = @user_id AND rp.allowed = 1
+    FROM user_role_ids src
+    JOIN dbo.tbl_role_permissions rp ON rp.role_id = src.role_id
+    WHERE rp.allowed = 1
   `);
   const allowedPaths = permResult.recordset.map((row) => row.page);
 
@@ -553,13 +616,11 @@ app.get("/api/secure/profile", requireMicrosoftAuth, (req, res) => {
   });
 });
 
-app.get("/api/settings", (req, res) => {
+app.get("/api/settings", async (req, res) => {
+  const featureFlags = await buildAppFeatureFlags();
   res.json({
     sidebarOrientation: "vertical",
-    featureFlags: {
-      enableUserSettings: process.env.FEATURE_ENABLE_USER_SETTINGS === "1",
-      enableUserProfile: process.env.FEATURE_ENABLE_USER_PROFILE !== "0",
-    },
+    featureFlags,
     hasMicrosoftClient: Boolean(config.microsoft.clientId),
   });
 });
@@ -906,12 +967,23 @@ app.get("/api/roles/matrix", requireAuth, requirePermission("/rollen*"), async (
   if (!(await ensureDbConfigured(res))) return;
   try {
     const pool = await db.getPool();
-    const rolesResult = await pool
-      .request()
-      .query("SELECT id, naam, volgorde FROM dbo.vw_roles ORDER BY volgorde, id");
-    const permsResult = await pool
-      .request()
-      .query("SELECT role_id, page, allowed FROM dbo.vw_role_permissions WHERE allowed = 1");
+    const rolesRequest = pool.request();
+    rolesRequest.input("super_admin_name", SUPER_ADMIN_ROLE_NAME);
+    const rolesResult = await rolesRequest.query(`
+      SELECT id, naam, volgorde
+      FROM dbo.vw_roles
+      WHERE LOWER(naam) <> LOWER(@super_admin_name)
+      ORDER BY volgorde, id
+    `);
+    const permsRequest = pool.request();
+    permsRequest.input("super_admin_name", SUPER_ADMIN_ROLE_NAME);
+    const permsResult = await permsRequest.query(`
+      SELECT rp.role_id, rp.page, rp.allowed
+      FROM dbo.vw_role_permissions rp
+      INNER JOIN dbo.vw_roles r ON r.id = rp.role_id
+      WHERE rp.allowed = 1
+        AND LOWER(r.naam) <> LOWER(@super_admin_name)
+    `);
     const permissions = {};
     for (const role of rolesResult.recordset) {
       permissions[role.id] = [];
@@ -942,6 +1014,9 @@ app.post("/api/roles", requireAuth, requirePermission("/rollen*"), async (req, r
   if (!name) {
     return res.status(400).json({ error: "Role name is required." });
   }
+  if (isSuperAdminRoleName(name)) {
+    return res.status(400).json({ error: "Deze rolnaam is gereserveerd." });
+  }
   try {
     const pool = await db.getPool();
     const request = pool.request();
@@ -962,7 +1037,14 @@ app.post("/api/roles/:id/delete", requireAuth, requirePermission("/rollen*"), as
   if (!(await ensureDbConfigured(res))) return;
   try {
     const roleId = Number(req.params.id);
+    if (!roleId || Number.isNaN(roleId)) {
+      return res.status(400).json({ error: "Role id is required." });
+    }
     const pool = await db.getPool();
+    const superAdminRoleId = await getSuperAdminRoleId(pool);
+    if (superAdminRoleId && roleId === superAdminRoleId) {
+      return res.status(403).json({ error: "Super Admin rol kan niet worden verwijderd." });
+    }
     const request = pool.request();
     request.input("role_id", roleId);
     await request.query("DELETE FROM dbo.tbl_role_permissions WHERE role_id = @role_id");
@@ -979,14 +1061,22 @@ app.post("/api/roles/permissions", requireAuth, requirePermission("/rollen*"), a
   try {
     const permissions = req.body?.permissions || {};
     const pool = await db.getPool();
+    const superAdminRoleId = await getSuperAdminRoleId(pool);
     for (const [roleId, patterns] of Object.entries(permissions)) {
+      const roleIdNumber = Number(roleId);
+      if (!roleIdNumber || Number.isNaN(roleIdNumber)) {
+        return res.status(400).json({ error: "Invalid role id in permissions payload." });
+      }
+      if (superAdminRoleId && roleIdNumber === superAdminRoleId) {
+        return res.status(403).json({ error: "Super Admin rol permissies kunnen niet worden gewijzigd." });
+      }
       const request = pool.request();
-      request.input("role_id", Number(roleId));
+      request.input("role_id", roleIdNumber);
       await request.query("DELETE FROM dbo.tbl_role_permissions WHERE role_id = @role_id");
       if (Array.isArray(patterns) && patterns.length) {
         for (const pattern of patterns) {
           const insert = pool.request();
-          insert.input("role_id", Number(roleId));
+          insert.input("role_id", roleIdNumber);
           insert.input("page", pattern);
           insert.input("allowed", 1);
           await insert.query(
@@ -1006,8 +1096,15 @@ app.post("/api/roles/order", requireAuth, requirePermission("/rollen*"), async (
   try {
     const roleOrders = req.body?.role_orders || [];
     const pool = await db.getPool();
+    const superAdminRoleId = await getSuperAdminRoleId(pool);
     for (let index = 0; index < roleOrders.length; index += 1) {
       const roleId = Number(roleOrders[index]);
+      if (!roleId || Number.isNaN(roleId)) {
+        return res.status(400).json({ error: "Invalid role id in role order payload." });
+      }
+      if (superAdminRoleId && roleId === superAdminRoleId) {
+        return res.status(403).json({ error: "Super Admin rol volgorde kan niet worden gewijzigd." });
+      }
       const request = pool.request();
       request.input("role_id", roleId);
       request.input("volgorde", index + 1);
@@ -1165,11 +1262,18 @@ app.get("/api/accounts/users", requireAuth, requirePermission("/accounts*"), asy
   if (!(await ensureDbConfigured(res))) return;
   try {
     const pool = await db.getPool();
-    const result = await pool.request().query(`
+    const request = pool.request();
+    request.input("eesa_email", EESA_SUPER_ADMIN_EMAIL);
+    request.input("super_admin_name", SUPER_ADMIN_ROLE_NAME);
+    const result = await request.query(`
       SELECT u.user_id AS id,
              u.username,
              u.email,
-             COALESCE(r.role_naam, u.role) AS role,
+             CASE
+               WHEN u.is_super_admin = 1 THEN NULL
+               WHEN LOWER(COALESCE(r.role_naam, u.role, '')) = LOWER(@super_admin_name) THEN NULL
+               ELSE COALESCE(r.role_naam, u.role)
+             END AS role,
              r.role_id AS role_id,
              u.is_super_admin,
              u.last_login
@@ -1182,7 +1286,8 @@ app.get("/api/accounts/users", requireAuth, requirePermission("/accounts*"), asy
         WHERE ur.user_id = u.user_id
         ORDER BY ur.role_volgorde
       ) r
-      ORDER BY u.is_super_admin DESC, u.username
+      WHERE LOWER(u.email) <> LOWER(@eesa_email)
+      ORDER BY u.username
     `);
     res.json(result.recordset || []);
   } catch (error) {
@@ -1194,9 +1299,12 @@ app.get("/api/accounts/roles", requireAuth, requirePermission("/accounts*"), asy
   if (!(await ensureDbConfigured(res))) return;
   try {
     const pool = await db.getPool();
-    const result = await pool.request().query(`
+    const request = pool.request();
+    request.input("super_admin_name", SUPER_ADMIN_ROLE_NAME);
+    const result = await request.query(`
       SELECT id, naam, volgorde
       FROM dbo.vw_roles
+      WHERE LOWER(naam) <> LOWER(@super_admin_name)
       ORDER BY volgorde, id
     `);
     res.json(result.recordset || []);
@@ -1208,8 +1316,10 @@ app.get("/api/accounts/roles", requireAuth, requirePermission("/accounts*"), asy
 app.post("/api/accounts/users/:id/role", requireAuth, requirePermission("/accounts*"), async (req, res) => {
   if (!(await ensureDbConfigured(res))) return;
   try {
+    const body = req.body || {};
     const userId = Number(req.params.id);
-    const roleId = req.body?.role_id ? Number(req.body.role_id) : null;
+    const roleId = body.role_id ? Number(body.role_id) : null;
+    const wantsSuperAdminChange = Object.prototype.hasOwnProperty.call(body, "is_super_admin");
     if (!userId || Number.isNaN(userId)) {
       return res.status(400).json({ error: "User id is required." });
     }
@@ -1218,16 +1328,50 @@ app.post("/api/accounts/users/:id/role", requireAuth, requirePermission("/accoun
     }
 
     const pool = await db.getPool();
+    const lookup = pool.request();
+    lookup.input("user_id", userId);
+    const userResult = await lookup.query(`
+      SELECT TOP 1 user_id, email, is_super_admin
+      FROM dbo.tbl_users
+      WHERE user_id = @user_id
+    `);
+    const targetUser = userResult.recordset[0];
+    if (!targetUser) {
+      return res.status(404).json({ error: "Gebruiker niet gevonden." });
+    }
+    if (isEesaSuperAdminEmail(targetUser.email)) {
+      return res.status(403).json({ error: "Dit account kan niet worden aangepast." });
+    }
+    if (wantsSuperAdminChange && !isEesaSuperAdminEmail(req.user?.email)) {
+      return res.status(403).json({ error: "Alleen EESA mag Super Admin toewijzen of intrekken." });
+    }
+
+    const nextIsSuperAdmin = wantsSuperAdminChange
+      ? Boolean(body.is_super_admin)
+      : Boolean(targetUser.is_super_admin);
+    const superAdminRoleId = await getSuperAdminRoleId(pool);
+    let roleName = null;
+    if (roleId && !Number.isNaN(roleId)) {
+      if (superAdminRoleId && roleId === superAdminRoleId) {
+        return res.status(403).json({ error: "Super Admin rol is verborgen en kan niet direct worden toegewezen." });
+      }
+      const roleLookup = pool.request();
+      roleLookup.input("role_id", roleId);
+      const roleResult = await roleLookup.query("SELECT naam FROM dbo.tbl_roles WHERE id = @role_id");
+      roleName = roleResult.recordset[0]?.naam || null;
+      if (!roleName) {
+        return res.status(400).json({ error: "Ongeldige rol." });
+      }
+      if (isSuperAdminRoleName(roleName)) {
+        return res.status(403).json({ error: "Super Admin rol is verborgen en kan niet direct worden toegewezen." });
+      }
+    }
+
     const request = pool.request();
     request.input("user_id", userId);
     await request.query("DELETE FROM dbo.tbl_user_roles WHERE user_id = @user_id");
 
     if (roleId && !Number.isNaN(roleId)) {
-      const roleLookup = pool.request();
-      roleLookup.input("role_id", roleId);
-      const roleResult = await roleLookup.query("SELECT naam FROM dbo.tbl_roles WHERE id = @role_id");
-      const roleName = roleResult.recordset[0]?.naam || null;
-
       const insert = pool.request();
       insert.input("user_id", userId);
       insert.input("role_id", roleId);
@@ -1236,12 +1380,18 @@ app.post("/api/accounts/users/:id/role", requireAuth, requirePermission("/accoun
       const update = pool.request();
       update.input("user_id", userId);
       update.input("role", roleName);
-      await update.query("UPDATE dbo.tbl_users SET role = @role WHERE user_id = @user_id");
+      update.input("is_super_admin", nextIsSuperAdmin ? 1 : 0);
+      await update.query(
+        "UPDATE dbo.tbl_users SET role = @role, is_super_admin = @is_super_admin WHERE user_id = @user_id"
+      );
     } else {
       const update = pool.request();
       update.input("user_id", userId);
       update.input("role", null);
-      await update.query("UPDATE dbo.tbl_users SET role = @role WHERE user_id = @user_id");
+      update.input("is_super_admin", nextIsSuperAdmin ? 1 : 0);
+      await update.query(
+        "UPDATE dbo.tbl_users SET role = @role, is_super_admin = @is_super_admin WHERE user_id = @user_id"
+      );
     }
 
     res.json({ success: true });
@@ -1262,6 +1412,21 @@ app.delete("/api/accounts/users/:id", requireAuth, requirePermission("/accounts*
     }
 
     const pool = await db.getPool();
+    const lookup = pool.request();
+    lookup.input("user_id", userId);
+    const userResult = await lookup.query(`
+      SELECT TOP 1 email
+      FROM dbo.tbl_users
+      WHERE user_id = @user_id
+    `);
+    const targetUser = userResult.recordset[0];
+    if (!targetUser) {
+      return res.status(404).json({ error: "Gebruiker niet gevonden." });
+    }
+    if (isEesaSuperAdminEmail(targetUser.email)) {
+      return res.status(403).json({ error: "Dit account kan niet worden verwijderd." });
+    }
+
     const request = pool.request();
     request.input("user_id", userId);
     await request.query("DELETE FROM dbo.tbl_users WHERE user_id = @user_id");

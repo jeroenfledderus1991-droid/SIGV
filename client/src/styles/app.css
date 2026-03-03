@@ -359,6 +359,7 @@
 
 .sidebar.variant-accent-solid {
   background: var(--sidebar-accent-start);
+  --sidebar-surface: var(--sidebar-accent-start);
   color: var(--accent-text-color);
   --sidebar-text: var(--accent-text-color);
   --sidebar-text-muted: color-mix(in srgb, var(--accent-text-color) 85%, transparent);
@@ -367,7 +368,18 @@
 }
 
 .sidebar.variant-accent-gradient {
-  background: linear-gradient(180deg, var(--sidebar-accent-start) 0%, var(--sidebar-accent-end) 100%);
+  background: linear-gradient(
+    180deg,
+    var(--sidebar-accent-start) 0%,
+    var(--sidebar-accent-start) 42%,
+    var(--sidebar-accent-end) 100%
+  );
+  --sidebar-surface: linear-gradient(
+    180deg,
+    var(--sidebar-accent-start) 0%,
+    var(--sidebar-accent-start) 42%,
+    var(--sidebar-accent-end) 100%
+  );
   color: var(--accent-text-color);
   --sidebar-text: var(--accent-text-color);
   --sidebar-text-muted: color-mix(in srgb, var(--accent-text-color) 85%, transparent);
@@ -377,6 +389,7 @@
 
 .sidebar.variant-white {
   background: #ffffff;
+  --sidebar-surface: #ffffff;
   color: var(--accent-color);
   --sidebar-text: var(--accent-color);
   --sidebar-text-muted: var(--accent-color);

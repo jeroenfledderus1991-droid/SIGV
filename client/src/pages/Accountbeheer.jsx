@@ -6,10 +6,14 @@ export default function Accountbeheer() {
   const [users, setUsers] = useState([]);
   const [roles, setRoles] = useState([]);
   const [modalState, setModalState] = useState({ open: false, user: null });
+  const [canManageSuperAdmin, setCanManageSuperAdmin] = useState(false);
 
   useEffect(() => {
     getJson("/accounts/users").then(setUsers).catch(() => setUsers([]));
     getJson("/accounts/roles").then(setRoles).catch(() => setRoles([]));
+    getJson("/auth/me")
+      .then((me) => setCanManageSuperAdmin((me?.email || "").toLowerCase() === "eesa@admin.local"))
+      .catch(() => setCanManageSuperAdmin(false));
   }, []);
 
   useEffect(() => {
@@ -22,7 +26,6 @@ export default function Accountbeheer() {
       { key: "username", label: "Gebruiker", sortable: true },
       { key: "email", label: "Email", sortable: true },
       { key: "role", label: "Rol", sortable: true },
-      { key: "is_super_admin", label: "Super admin", sortable: true, type: "boolean" },
       { key: "last_login", label: "Laatste login", sortable: true, type: "datetime" },
     ],
     []
@@ -43,8 +46,10 @@ export default function Accountbeheer() {
     if (!modalState.user?.id) return;
     const form = new FormData(event.target);
     const roleId = form.get("role_id") || null;
+    const isSuperAdmin = form.get("is_super_admin") === "on";
     await postJson(`/accounts/users/${modalState.user.id}/role`, {
       role_id: roleId ? Number(roleId) : null,
+      ...(canManageSuperAdmin ? { is_super_admin: isSuperAdmin } : {}),
     });
     setModalState({ open: false, user: null });
     refreshUsers();
@@ -98,6 +103,25 @@ export default function Accountbeheer() {
                   </option>
                 ))}
               </select>
+              {canManageSuperAdmin && (
+                <>
+                  <label className="form-label" style={{ marginTop: "12px" }}>
+                    Super admin toegang
+                  </label>
+                  <div className="form-check">
+                    <input
+                      id="is-super-admin"
+                      className="form-check-input"
+                      type="checkbox"
+                      name="is_super_admin"
+                      defaultChecked={Boolean(modalState.user?.is_super_admin)}
+                    />
+                    <label className="form-check-label" htmlFor="is-super-admin">
+                      Toegang tot alle pagina's
+                    </label>
+                  </div>
+                </>
+              )}
               <div className="modal-actions">
                 <button
                   type="button"

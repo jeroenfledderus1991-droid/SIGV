@@ -224,7 +224,17 @@ body {
 
 .sidebar .menu-link:hover {
     color: var(--sidebar-text) !important;
-    background: var(--sidebar-hover) !important;
+    background:
+        linear-gradient(0deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.18)),
+        var(--sidebar-hover) !important;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.28);
+}
+
+.sidebar .menu-link.active:hover {
+    background:
+        linear-gradient(0deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.18)),
+        var(--sidebar-active) !important;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.3);
 }
 
 .sidebar .menu-link.active {
@@ -242,6 +252,10 @@ body {
 
 .sidebar .user-info:hover {
     color: var(--sidebar-text) !important;
+    background:
+        linear-gradient(0deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.18)),
+        var(--sidebar-hover) !important;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.28);
 }
 
 .sidebar .logout-btn {
@@ -269,11 +283,11 @@ body {
 }
 
 .sidebar .logo h3 {
-    color: var(--sidebar-text) !important;
+    color: var(--sidebar-header-ink, var(--sidebar-text)) !important;
 }
 
 .sidebar .sidebar-toggle {
-    color: var(--sidebar-text) !important;
+    color: var(--sidebar-header-ink, var(--sidebar-text)) !important;
 }
 
 .sidebar .menu-link i {

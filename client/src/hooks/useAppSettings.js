@@ -9,6 +9,7 @@ const DEFAULT_SETTINGS = {
   featureFlags: {
     enableUserSettings: true,
     enableUserProfile: true,
+    sidebarHeaderWhite: false,
   },
   hasMicrosoftClient: false,
 };

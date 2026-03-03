@@ -40,7 +40,6 @@ GO
 IF OBJECT_ID('dbo.tbl_user_settings','U') IS NOT NULL AND COL_LENGTH('dbo.tbl_user_settings','gradient_intensity') IS NULL
     ALTER TABLE dbo.tbl_user_settings ADD gradient_intensity INT NULL;
 GO
-
 -- Default vullen voor bestaande records
 IF OBJECT_ID('dbo.tbl_user_settings','U') IS NOT NULL
     UPDATE dbo.tbl_user_settings SET sidebar_variant = 'accent-gradient' WHERE sidebar_variant IS NULL;

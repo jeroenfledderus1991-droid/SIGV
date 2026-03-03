@@ -74,3 +74,8 @@ IF NOT EXISTS (SELECT 1 FROM dbo.tbl_feature_flags WHERE flag_name = 'ENABLE_USE
     INSERT INTO dbo.tbl_feature_flags (flag_name, enabled, page_key, description)
     VALUES ('ENABLE_USER_AUTO_LOGIN', 0, 'SYSTEM', 'Log automatisch in als standaard gebruiker');
 GO
+
+IF NOT EXISTS (SELECT 1 FROM dbo.tbl_feature_flags WHERE flag_name = 'ENABLE_SIDEBAR_HEADER_WHITE')
+    INSERT INTO dbo.tbl_feature_flags (flag_name, enabled, page_key, description)
+    VALUES ('ENABLE_SIDEBAR_HEADER_WHITE', 0, 'UI_UX', 'Maakt het bovenste blok van de sidebar wit voor logo-compatibiliteit.');
+GO

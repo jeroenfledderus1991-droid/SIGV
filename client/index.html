@@ -39,9 +39,10 @@
           };
           var mixWithBlack = function (hex, intensity) {
             var ratio = intensity / 100;
+            var boosted = Math.pow(ratio, 0.65);
             var rgb = hexToRgb(hex);
             var mixed = rgb.map(function (value) {
-              return Math.round(value * (1 - ratio));
+              return Math.round(value * (1 - boosted));
             });
             return "rgb(" + mixed.join(",") + ")";
           };

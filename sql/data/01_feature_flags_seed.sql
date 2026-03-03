@@ -23,7 +23,8 @@ USING (VALUES
     ('ENABLE_USER_SETTINGS', 1, 'SETTINGS', 'Sta gebruikers toe om persoonlijke instellingen aan te passen (thema, kleuren, sidebar)'),
     ('ENABLE_AUTO_LOGINS', 0, 'SYSTEM', 'Sta automatische login via speciale link toe'),
     ('ENABLE_ADMIN_AUTO_LOGIN', 0, 'SYSTEM', 'Log automatisch in als superadmin (EESA)'),
-    ('ENABLE_USER_AUTO_LOGIN', 0, 'SYSTEM', 'Log automatisch in als standaard gebruiker')
+    ('ENABLE_USER_AUTO_LOGIN', 0, 'SYSTEM', 'Log automatisch in als standaard gebruiker'),
+    ('ENABLE_SIDEBAR_HEADER_WHITE', 0, 'UI_UX', 'Maakt het bovenste blok van de sidebar wit voor logo-compatibiliteit.')
 ) AS source (flag_name, enabled, page_key, description)
 ON target.flag_name = source.flag_name
 WHEN MATCHED THEN
@@ -39,7 +40,7 @@ GO
 
 -- Clean up old/deprecated feature flags
 DELETE FROM tbl_feature_flags 
-WHERE flag_name NOT IN ('ENABLE_USER_SETTINGS', 'ENABLE_AUTO_LOGINS', 'ENABLE_ADMIN_AUTO_LOGIN', 'ENABLE_USER_AUTO_LOGIN');
+WHERE flag_name NOT IN ('ENABLE_USER_SETTINGS', 'ENABLE_AUTO_LOGINS', 'ENABLE_ADMIN_AUTO_LOGIN', 'ENABLE_USER_AUTO_LOGIN', 'ENABLE_SIDEBAR_HEADER_WHITE');
 GO
 
 -- Count and report

@@ -188,9 +188,10 @@ function App() {
     localStorage.setItem(SIDEBAR_KEY, next ? "1" : "0");
   };
 
+  const sidebarHeaderClass = appSettings.featureFlags?.sidebarHeaderWhite ? "header-white" : "header-theme";
   const sidebarClass = `sidebar ${collapsed ? "collapsed" : ""} ${
     mobileOpen ? "mobile-open" : ""
-  } variant-${settings.sidebarVariant}`;
+  } variant-${settings.sidebarVariant} ${sidebarHeaderClass}`;
 
   const appLoading =
     !isAuthRoute &&
@@ -251,6 +252,8 @@ function App() {
                   end={item.end}
                   className={({ isActive }) => (isActive ? "menu-link active" : "menu-link")}
                   data-tooltip={item.label}
+                  title={collapsed ? item.label : undefined}
+                  aria-label={item.label}
                   onClick={() => setMobileOpen(false)}
                 >
                   <i className={`fas ${item.icon}`} />

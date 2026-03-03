@@ -8,6 +8,10 @@
 .sidebar {
   width: 210px;
   background: var(--sidebar-bg);
+  --sidebar-header-bg: transparent;
+  --sidebar-header-ink: var(--sidebar-text);
+  --sidebar-header-border: var(--sidebar-hover);
+  --sidebar-header-hover: var(--sidebar-hover);
   color: var(--sidebar-text);
   position: fixed;
   inset: 0 auto 0 0;
@@ -69,7 +73,8 @@
   position: relative; /* for nub positioning */
   min-height: 56px;
   padding: 10px 10px;
-  border-bottom: 1px solid var(--sidebar-hover);
+  background: var(--sidebar-header-bg);
+  border-bottom: 1px solid var(--sidebar-header-border);
   display: grid;
   grid-template-columns: 1fr auto; /* left: logo/title, right: toggle */
   align-items: center;
@@ -88,7 +93,7 @@
   border-radius: 8px;
 }
 .logo h3 {
-  color: var(--sidebar-text);
+  color: var(--sidebar-header-ink);
   margin: 0;
   font-size: 14px;
   font-weight: 600;
@@ -99,20 +104,27 @@
 .sidebar-toggle {
   background: none;
   border: none;
-  color: var(--sidebar-text);
+  color: var(--sidebar-header-ink);
   font-size: 18px;
   cursor: pointer;
   padding: 6px;
   border-radius: 8px;
   transition: background 0.2s;
 }
-.sidebar-toggle:hover { background: var(--sidebar-hover); }
+.sidebar-toggle:hover { background: var(--sidebar-header-hover); }
 .sidebar-toggle i { transition: transform .2s; }
 .sidebar.collapsed .sidebar-toggle i { transform: rotate(180deg); }
 
 /* Center header content when collapsed */
 .sidebar.collapsed .sidebar-header { justify-content: center; }
 .sidebar.collapsed .logo { display: none; }
+
+.sidebar.header-white {
+  --sidebar-header-bg: #ffffff;
+  --sidebar-header-ink: var(--accent-color);
+  --sidebar-header-border: color-mix(in srgb, var(--accent-color) 28%, #ffffff);
+  --sidebar-header-hover: color-mix(in srgb, var(--accent-color) 14%, transparent);
+}
 
 /* ===== EDGE NUB (clickable notch to toggle) ===== */
 .sidebar-nub {
@@ -177,7 +189,14 @@
   cursor: pointer; /* Zorgt voor handje */
 }
 .menu-link:hover {
-  background: var(--sidebar-hover) !important;
+  background:
+    linear-gradient(
+      0deg,
+      color-mix(in srgb, currentColor 14%, transparent),
+      color-mix(in srgb, currentColor 14%, transparent)
+    ),
+    var(--sidebar-hover) !important;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, currentColor 24%, transparent);
   color: var(--sidebar-text) !important;
 }
 .menu-link.active {
@@ -253,7 +272,7 @@
   border: none;
   cursor: pointer;
   font-size: 13px;
-  transition: background 0.2s, color 0.2s;
+  transition: background 0.2s, color 0.2s, box-shadow 0.2s;
   width: 100%;
   text-align: left;
 }
@@ -265,7 +284,14 @@
 }
 .sidebar .user-info:hover,
 .sidebar .user-info:focus {
-  background: var(--sidebar-hover) !important;
+  background:
+    linear-gradient(
+      0deg,
+      color-mix(in srgb, currentColor 14%, transparent),
+      color-mix(in srgb, currentColor 14%, transparent)
+    ),
+    var(--sidebar-hover) !important;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, currentColor 24%, transparent);
   color: var(--sidebar-text) !important;
 }
 .sidebar .user-info .fa-user-circle {
@@ -279,7 +305,7 @@
   bottom: calc(100% + 8px);
   left: 8px;
   right: 8px;
-  background: var(--sidebar-bg, #fff);
+  background: var(--sidebar-surface, var(--sidebar-bg, #fff));
   border: 1px solid var(--sidebar-hover);
   border-radius: 10px;
   box-shadow: 0 4px 12px rgba(0,0,0,0.15);
@@ -307,7 +333,7 @@
   padding: 10px 12px;
   color: var(--sidebar-text-muted) !important;
   text-decoration: none;
-  transition: background 0.2s, color 0.2s;
+  transition: background 0.2s, color 0.2s, box-shadow 0.2s;
   cursor: pointer;
   border: none;
   background: none;
@@ -317,7 +343,14 @@
 }
 
 .profile-dropdown-item:hover {
-  background: var(--sidebar-hover) !important;
+  background:
+    linear-gradient(
+      0deg,
+      color-mix(in srgb, currentColor 14%, transparent),
+      color-mix(in srgb, currentColor 14%, transparent)
+    ),
+    var(--sidebar-hover) !important;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, currentColor 24%, transparent);
   color: var(--sidebar-text) !important;
 }
 

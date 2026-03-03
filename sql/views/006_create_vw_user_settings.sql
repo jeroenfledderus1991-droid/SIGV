@@ -51,7 +51,7 @@ SELECT
         WHEN 'minimal' THEN 'Minimaal'
         ELSE 'Standaard'
     END AS display_mode_label,
-    
+
     -- Gradient intensity percentage
     CAST(us.gradient_intensity AS NVARCHAR(10)) + '%' AS gradient_intensity_display
 
