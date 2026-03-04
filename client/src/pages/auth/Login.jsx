@@ -1,14 +1,42 @@
-import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { postJson } from "../../api";
+import { useEffect, useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { getJson, postJson } from "../../api";
 import { loadBootstrap } from "../../bootstrap";
 
 export default function Login() {
   const [logoFailed, setLogoFailed] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [hasMicrosoftClient, setHasMicrosoftClient] = useState(false);
+  const [localAuthEnabled, setLocalAuthEnabled] = useState(true);
   const appOrigin = import.meta.env.VITE_APP_ORIGIN || "";
+  const location = useLocation();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    let mounted = true;
+    getJson("/settings")
+      .then((settings) => {
+        if (!mounted) return;
+        setHasMicrosoftClient(Boolean(settings?.hasMicrosoftClient));
+        setLocalAuthEnabled(settings?.localAuthEnabled !== false);
+      })
+      .catch(() => {
+        if (!mounted) return;
+        setHasMicrosoftClient(false);
+        setLocalAuthEnabled(true);
+      });
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    const authError = new URLSearchParams(location.search).get("auth_error");
+    if (authError) {
+      setError(authError);
+    }
+  }, [location.search]);
 
   const applyThemeSettings = (settings) => {
     if (!settings) return;
@@ -93,46 +121,61 @@ export default function Login() {
             <span>{error}</span>
           </div>
         )}
-        <form className="auth-form" onSubmit={handleSubmit} autoComplete="off">
-          <div className="auth-field">
-            <label htmlFor="login-email">E-mailadres</label>
-            <div className="auth-input-wrapper">
-              <input
-                id="login-email"
-                name="identifier"
-                type="email"
-                className="auth-input"
-                placeholder="Voer je e-mailadres in"
-                required
-              />
-              <i className="fas fa-envelope auth-input-icon" />
+        {localAuthEnabled && (
+          <form className="auth-form" onSubmit={handleSubmit} autoComplete="off">
+            <div className="auth-field">
+              <label htmlFor="login-email">E-mailadres</label>
+              <div className="auth-input-wrapper">
+                <input
+                  id="login-email"
+                  name="identifier"
+                  type="email"
+                  className="auth-input"
+                  placeholder="Voer je e-mailadres in"
+                  required
+                />
+                <i className="fas fa-envelope auth-input-icon" />
+              </div>
             </div>
-          </div>
 
-          <div className="auth-field">
-            <label htmlFor="login-password">Wachtwoord</label>
-            <div className="auth-input-wrapper">
-              <input
-                id="login-password"
-                name="password"
-                type="password"
-                className="auth-input"
-                placeholder="Voer je wachtwoord in"
-                required
-              />
-              <i className="fas fa-lock auth-input-icon" />
+            <div className="auth-field">
+              <label htmlFor="login-password">Wachtwoord</label>
+              <div className="auth-input-wrapper">
+                <input
+                  id="login-password"
+                  name="password"
+                  type="password"
+                  className="auth-input"
+                  placeholder="Voer je wachtwoord in"
+                  required
+                />
+                <i className="fas fa-lock auth-input-icon" />
+              </div>
             </div>
+
+            <button type="submit" className="auth-button" disabled={loading}>
+              {loading ? "Bezig..." : "Inloggen"} <i className="fas fa-arrow-right" />
+            </button>
+          </form>
+        )}
+        {hasMicrosoftClient && (
+          <a className="auth-button auth-button-microsoft" href="/api/auth/microsoft/start">
+            <i className="fab fa-microsoft" />
+            Inloggen met Microsoft
+          </a>
+        )}
+        {!localAuthEnabled && !hasMicrosoftClient && (
+          <div className="auth-alert auth-alert-error" style={{ marginTop: "12px" }}>
+            <i className="fas fa-exclamation-circle" />
+            <span>Geen inlogmethode geconfigureerd. Controleer de .env instellingen.</span>
           </div>
-
-          <button type="submit" className="auth-button" disabled={loading}>
-            {loading ? "Bezig..." : "Inloggen"} <i className="fas fa-arrow-right" />
-          </button>
-        </form>
-
-        <div className="auth-footer">
-          <Link to="/register">Nog geen account? Registreer hier</Link>
-          <Link to="/wachtwoord-vergeten">Wachtwoord vergeten?</Link>
-        </div>
+        )}
+        {localAuthEnabled && (
+          <div className="auth-footer">
+            <Link to="/register">Nog geen account? Registreer hier</Link>
+            <Link to="/wachtwoord-vergeten">Wachtwoord vergeten?</Link>
+          </div>
+        )}
       </div>
     </div>
   );

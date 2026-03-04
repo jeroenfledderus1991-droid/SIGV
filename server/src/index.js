@@ -8,12 +8,16 @@ const http = require("http");
 const https = require("https");
 const config = require("./config");
 const db = require("./db");
-const { requireMicrosoftAuth } = require("./microsoftAuth");
+const { requireMicrosoftAuth, verifyMicrosoftToken } = require("./microsoftAuth");
 const auth = require("./auth");
 
 const isProduction = (config.env || "").toLowerCase() === "production";
 const SESSION_SECRET_MIN_LENGTH = 32;
 const CSRF_COOKIE = "csrf_token";
+const MICROSOFT_STATE_COOKIE = "ms_auth_state";
+const MICROSOFT_REDIRECT_COOKIE = "ms_auth_redirect";
+const MICROSOFT_AUTH_COOKIE_PATH = "/api/auth/microsoft";
+const MICROSOFT_AUTH_STATE_TTL_MS = 10 * 60 * 1000;
 
 const app = express();
 app.set("etag", false);
@@ -57,6 +61,12 @@ const VITE_PORT = Number(process.env.VITE_PORT || 0);
 const VITE_ORIGIN =
   process.env.VITE_ORIGIN ||
   (VITE_PORT ? `http://localhost:${VITE_PORT}` : config.corsOrigin || "");
+const hasLocalAuth = config.localAuthEnabled !== false;
+const hasMicrosoftAuth =
+  config.microsoft.enabled !== false &&
+  Boolean(config.microsoft.clientId) &&
+  Boolean(config.microsoft.tenantId) &&
+  Boolean(config.microsoft.clientSecret);
 
 async function ensureDbConfigured(res) {
   if (!config.db.server) {
@@ -137,6 +147,29 @@ function setCsrfCookie(res, token) {
   });
 }
 
+function setMicrosoftAuthCookie(res, name, value) {
+  const secure = isProduction;
+  res.cookie(name, value, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure,
+    path: MICROSOFT_AUTH_COOKIE_PATH,
+    maxAge: MICROSOFT_AUTH_STATE_TTL_MS,
+  });
+}
+
+function clearMicrosoftAuthCookies(res) {
+  const secure = isProduction;
+  const options = {
+    httpOnly: true,
+    sameSite: "lax",
+    secure,
+    path: MICROSOFT_AUTH_COOKIE_PATH,
+  };
+  res.clearCookie(MICROSOFT_STATE_COOKIE, options);
+  res.clearCookie(MICROSOFT_REDIRECT_COOKIE, options);
+}
+
 function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
 }
@@ -160,6 +193,93 @@ function mixWithBlack(hex, intensity) {
   const [r, g, b] = hexToRgb(hex);
   const mixed = [r, g, b].map((value) => Math.round(value * (1 - boosted)));
   return `rgb(${mixed.join(",")})`;
+}
+
+function resolveAppBaseUrl(req) {
+  const configuredOrigin = process.env.VITE_APP_ORIGIN || process.env.VITE_ORIGIN || config.corsOrigin || "";
+  if (configuredOrigin) {
+    try {
+      return new URL(configuredOrigin).toString();
+    } catch {}
+  }
+  const proto = (req.headers["x-forwarded-proto"] || req.protocol || "http")
+    .toString()
+    .split(",")[0]
+    .trim();
+  const host = (req.headers["x-forwarded-host"] || req.get("host") || "").toString().split(",")[0].trim();
+  if (!host) return "http://localhost:5173";
+  return `${proto}://${host}`;
+}
+
+function buildAppRedirectUrl(req, pathname, searchParams) {
+  const base = resolveAppBaseUrl(req);
+  const url = new URL(pathname, base);
+  if (searchParams && typeof searchParams === "object") {
+    for (const [key, value] of Object.entries(searchParams)) {
+      if (value !== undefined && value !== null && value !== "") {
+        url.searchParams.set(key, value);
+      }
+    }
+  }
+  return url.toString();
+}
+
+function resolveMicrosoftRedirectUri(req) {
+  if (config.microsoft.redirectUri) return config.microsoft.redirectUri;
+  return buildAppRedirectUrl(req, "/api/auth/microsoft/callback");
+}
+
+function buildMicrosoftAuthorizeUrl(req) {
+  const state = crypto.randomBytes(24).toString("base64url");
+  const redirectUri = resolveMicrosoftRedirectUri(req);
+  const authorizeUrl = new URL(
+    `https://login.microsoftonline.com/${config.microsoft.tenantId}/oauth2/v2.0/authorize`
+  );
+  authorizeUrl.searchParams.set("client_id", config.microsoft.clientId);
+  authorizeUrl.searchParams.set("response_type", "code");
+  authorizeUrl.searchParams.set("redirect_uri", redirectUri);
+  authorizeUrl.searchParams.set("response_mode", "query");
+  authorizeUrl.searchParams.set("scope", "openid profile email");
+  authorizeUrl.searchParams.set("state", state);
+  authorizeUrl.searchParams.set("prompt", "select_account");
+  return { state, redirectUri, authorizeUrl: authorizeUrl.toString() };
+}
+
+async function exchangeMicrosoftCodeForToken(code, redirectUri) {
+  const tokenEndpoint = `https://login.microsoftonline.com/${config.microsoft.tenantId}/oauth2/v2.0/token`;
+  const payload = new URLSearchParams();
+  payload.set("grant_type", "authorization_code");
+  payload.set("client_id", config.microsoft.clientId);
+  payload.set("client_secret", config.microsoft.clientSecret);
+  payload.set("code", code);
+  payload.set("redirect_uri", redirectUri);
+  payload.set("scope", "openid profile email");
+
+  const tokenResponse = await fetch(tokenEndpoint, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: payload.toString(),
+  });
+
+  const data = await tokenResponse.json().catch(() => ({}));
+  if (!tokenResponse.ok) {
+    const message =
+      data.error_description ||
+      data.error ||
+      "Kon Microsoft autorisatiecode niet omzetten naar token.";
+    const error = new Error(message);
+    error.status = 401;
+    throw error;
+  }
+  return data;
+}
+
+function getMicrosoftAccountEmail(payload) {
+  const candidates = [payload?.preferred_username, payload?.email, payload?.upn];
+  const email = candidates
+    .map((value) => normalizeEmail(value))
+    .find((value) => value && value.includes("@"));
+  return email || "";
 }
 
 async function loadFeatureFlags(flagNames) {
@@ -265,7 +385,8 @@ async function buildBootstrap(req, res) {
   const appSettings = {
     sidebarOrientation: "vertical",
     featureFlags,
-    hasMicrosoftClient: Boolean(config.microsoft.clientId),
+    localAuthEnabled: hasLocalAuth,
+    hasMicrosoftClient: hasMicrosoftAuth,
   };
 
   const fallbackTheme = {
@@ -616,14 +737,118 @@ app.get("/api/secure/profile", requireMicrosoftAuth, (req, res) => {
   });
 });
 
+app.get("/api/auth/microsoft/start", async (req, res) => {
+  if (!(await ensureDbConfigured(res))) return;
+  if (!hasMicrosoftAuth) {
+    return res.redirect(buildAppRedirectUrl(req, "/login", { auth_error: "Microsoft login is uitgeschakeld." }));
+  }
+  try {
+    const { state, redirectUri, authorizeUrl } = buildMicrosoftAuthorizeUrl(req);
+    setMicrosoftAuthCookie(res, MICROSOFT_STATE_COOKIE, state);
+    setMicrosoftAuthCookie(res, MICROSOFT_REDIRECT_COOKIE, redirectUri);
+    return res.redirect(authorizeUrl);
+  } catch (error) {
+    return res.redirect(
+      buildAppRedirectUrl(req, "/login", { auth_error: "Kon Microsoft login niet starten." })
+    );
+  }
+});
+
+app.get("/api/auth/microsoft/callback", async (req, res) => {
+  if (!(await ensureDbConfigured(res))) return;
+
+  const fail = (message) => {
+    clearMicrosoftAuthCookies(res);
+    return res.redirect(buildAppRedirectUrl(req, "/login", { auth_error: message }));
+  };
+
+  if (!hasMicrosoftAuth) {
+    return fail("Microsoft login is uitgeschakeld.");
+  }
+
+  const queryError = req.query?.error_description || req.query?.error;
+  if (queryError) {
+    return fail("Microsoft login is geannuleerd of mislukt.");
+  }
+
+  const state = String(req.query?.state || "");
+  const code = String(req.query?.code || "");
+  const expectedState = readCookie(req, MICROSOFT_STATE_COOKIE);
+  const redirectUri = readCookie(req, MICROSOFT_REDIRECT_COOKIE) || resolveMicrosoftRedirectUri(req);
+
+  if (!state || !expectedState || state !== expectedState) {
+    return fail("Ongeldige Microsoft login sessie. Probeer opnieuw.");
+  }
+  if (!code) {
+    return fail("Microsoft login code ontbreekt.");
+  }
+
+  try {
+    const tokenResult = await exchangeMicrosoftCodeForToken(code, redirectUri);
+    const idToken = tokenResult.id_token || "";
+    if (!idToken) {
+      return fail("Microsoft token ontbreekt.");
+    }
+
+    const tokenPayload = await verifyMicrosoftToken(idToken);
+    const email = getMicrosoftAccountEmail(tokenPayload);
+    if (!email) {
+      return fail("Kon geen e-mailadres ophalen uit Microsoft account.");
+    }
+
+    const pool = await db.getPool();
+    const lookup = pool.request();
+    lookup.input("email", email);
+    const userResult = await lookup.query(`
+      SELECT TOP 1 user_id, username, email, role, is_super_admin
+      FROM dbo.tbl_users
+      WHERE LOWER(email) = LOWER(@email)
+    `);
+    const user = userResult.recordset[0];
+    if (!user) {
+      return fail("Je Microsoft account is niet gekoppeld aan een gebruiker.");
+    }
+
+    const sessionId = await auth.createSessionForUser(user.user_id);
+    const cookieValue = auth.createSignedSession(sessionId);
+    res.cookie(auth.SESSION_COOKIE, cookieValue, auth.buildSessionCookieOptions());
+    if (config.csrfEnabled) {
+      setCsrfCookie(res, crypto.randomBytes(24).toString("base64url"));
+    }
+
+    const update = pool.request();
+    update.input("user_id", user.user_id);
+    await update.query("UPDATE dbo.tbl_users SET last_login = SYSDATETIME() WHERE user_id = @user_id");
+
+    clearMicrosoftAuthCookies(res);
+    return res.redirect(buildAppRedirectUrl(req, "/"));
+  } catch (error) {
+    console.error("Microsoft callback failed:", error);
+    const detail = String(error?.message || "Onbekende fout");
+    const message =
+      isProduction
+        ? "Microsoft login mislukt."
+        : `Microsoft login mislukt: ${detail}`;
+    return fail(message);
+  }
+});
+
 app.get("/api/settings", async (req, res) => {
   const featureFlags = await buildAppFeatureFlags();
   res.json({
     sidebarOrientation: "vertical",
     featureFlags,
-    hasMicrosoftClient: Boolean(config.microsoft.clientId),
+    localAuthEnabled: hasLocalAuth,
+    hasMicrosoftClient: hasMicrosoftAuth,
   });
 });
+
+function requireLocalAuthEnabled(req, res, next) {
+  if (!hasLocalAuth) {
+    return res.status(501).json({ error: "Lokale login is uitgeschakeld." });
+  }
+  return next();
+}
 
 app.get("/api/auth/me", requireAuth, (req, res) => {
   res.json({
@@ -644,7 +869,7 @@ app.get("/api/auth/permissions", requireAuth, async (req, res) => {
   }
 });
 
-app.post("/api/auth/login", async (req, res) => {
+app.post("/api/auth/login", requireLocalAuthEnabled, async (req, res) => {
   if (!(await ensureDbConfigured(res))) return;
   const identifier = (req.body?.identifier || "").trim().toLowerCase();
   const password = req.body?.password || "";
@@ -770,7 +995,7 @@ app.post("/api/auth/logout", async (req, res) => {
   }
 });
 
-app.post("/api/auth/register", async (req, res) => {
+app.post("/api/auth/register", requireLocalAuthEnabled, async (req, res) => {
   if (!(await ensureDbConfigured(res))) return;
   const username = (req.body?.username || "").trim();
   const email = (req.body?.email || "").trim();
@@ -814,7 +1039,7 @@ app.post("/api/auth/register", async (req, res) => {
   }
 });
 
-app.post("/api/auth/forgot-password", async (req, res) => {
+app.post("/api/auth/forgot-password", requireLocalAuthEnabled, async (req, res) => {
   if (!(await ensureDbConfigured(res))) return;
   const identifier = (req.body?.identifier || "").trim().toLowerCase();
   if (!identifier) {
@@ -845,7 +1070,7 @@ app.post("/api/auth/forgot-password", async (req, res) => {
   }
 });
 
-app.post("/api/auth/reset-password", async (req, res) => {
+app.post("/api/auth/reset-password", requireLocalAuthEnabled, async (req, res) => {
   if (!(await ensureDbConfigured(res))) return;
   const token = (req.body?.token || "").trim();
   const password = req.body?.password || "";

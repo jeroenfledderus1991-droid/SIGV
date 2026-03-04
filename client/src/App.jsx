@@ -49,6 +49,26 @@ function PageSkeleton() {
   );
 }
 
+function MicrosoftAuthBridge() {
+  const location = useLocation();
+
+  useEffect(() => {
+    const query = location.search || "";
+    window.location.replace(`/api/auth/microsoft/callback${query}`);
+  }, [location.search]);
+
+  return (
+    <div className="auth-page">
+      <div className="auth-card">
+        <div className="auth-header">
+          <h1 className="auth-title">Aanmelden afronden</h1>
+          <p className="auth-subtitle">Even geduld, we ronden de Microsoft-login af...</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function App() {
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem(SIDEBAR_KEY) === "1");
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -62,6 +82,7 @@ function App() {
     const path = location.pathname;
     return (
       path === "/login" ||
+      path === "/signin-oidc" ||
       path === "/register" ||
       path === "/wachtwoord-vergeten" ||
       path.startsWith("/reset-password")
@@ -81,6 +102,7 @@ function App() {
 
   const enableUserProfile = appSettings.featureFlags?.enableUserProfile !== false;
   const enableUserSettings = appSettings.featureFlags?.enableUserSettings !== false;
+  const localAuthEnabled = appSettings.localAuthEnabled !== false;
 
   const isAllowedPath = useMemo(() => {
     const allowed = effectiveAllowedPaths;
@@ -220,11 +242,27 @@ function App() {
       <div className="auth-layout">
         <Routes>
           <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="/wachtwoord-vergeten" element={<ForgotPassword />} />
-          <Route path="/reset-password" element={<ResetPassword />} />
-          <Route path="/reset-password/:token" element={<ResetPassword />} />
-          <Route path="/reset-password/*" element={<ResetPassword />} />
+          <Route path="/signin-oidc" element={<MicrosoftAuthBridge />} />
+          <Route
+            path="/register"
+            element={localAuthEnabled ? <Register /> : <Navigate to="/login" replace />}
+          />
+          <Route
+            path="/wachtwoord-vergeten"
+            element={localAuthEnabled ? <ForgotPassword /> : <Navigate to="/login" replace />}
+          />
+          <Route
+            path="/reset-password"
+            element={localAuthEnabled ? <ResetPassword /> : <Navigate to="/login" replace />}
+          />
+          <Route
+            path="/reset-password/:token"
+            element={localAuthEnabled ? <ResetPassword /> : <Navigate to="/login" replace />}
+          />
+          <Route
+            path="/reset-password/*"
+            element={localAuthEnabled ? <ResetPassword /> : <Navigate to="/login" replace />}
+          />
           <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
       </div>

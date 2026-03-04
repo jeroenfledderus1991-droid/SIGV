@@ -35,8 +35,21 @@ builder.Services.AddCors(options =>
 });
 
 var microsoftTenant = builder.Configuration["MICROSOFT_TENANT_ID"];
+var inlogTenant = builder.Configuration["INLOG_MICROSOFT_TENANT_ID"];
+if (!string.IsNullOrWhiteSpace(inlogTenant))
+{
+    microsoftTenant = inlogTenant;
+}
 var microsoftClientId = builder.Configuration["MICROSOFT_CLIENT_ID"];
-var authEnabled = !string.IsNullOrWhiteSpace(microsoftTenant) && !string.IsNullOrWhiteSpace(microsoftClientId);
+var inlogClientId = builder.Configuration["INLOG_MICROSOFT_CLIENT_ID"];
+if (!string.IsNullOrWhiteSpace(inlogClientId))
+{
+    microsoftClientId = inlogClientId;
+}
+var microsoftAuthEnabled = (builder.Configuration["MICROSOFT_AUTH_ENABLED"] ?? "1") != "0";
+var authEnabled = microsoftAuthEnabled
+    && !string.IsNullOrWhiteSpace(microsoftTenant)
+    && !string.IsNullOrWhiteSpace(microsoftClientId);
 
 if (authEnabled)
 {
@@ -116,14 +129,16 @@ app.MapGet("/api/profile", () =>
 
 app.MapGet("/api/settings", (IConfiguration config) =>
 {
+    var localAuthEnabled = (config["LOCAL_AUTH_ENABLED"] ?? "1") != "0";
     return Results.Ok(new
     {
         sidebarOrientation = "vertical",
+        localAuthEnabled,
         featureFlags = new
         {
             enableUserSettings = config["FEATURE_ENABLE_USER_SETTINGS"] == "1"
         },
-        hasMicrosoftClient = !string.IsNullOrWhiteSpace(config["MICROSOFT_CLIENT_ID"])
+        hasMicrosoftClient = authEnabled
     });
 });
 
@@ -145,7 +160,11 @@ if (authEnabled)
 else
 {
     app.MapGet("/api/secure/profile", () =>
-        Results.Problem("Microsoft auth is not configured.", statusCode: StatusCodes.Status501NotImplemented));
+        Results.Problem(
+            microsoftAuthEnabled
+                ? "Microsoft auth is not configured."
+                : "Microsoft auth is disabled.",
+            statusCode: StatusCodes.Status501NotImplemented));
 }
 
 if (dbConfigured)

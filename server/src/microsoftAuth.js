@@ -1,15 +1,23 @@
 const { createRemoteJWKSet, jwtVerify } = require("jose");
 const config = require("./config");
 
+const microsoftEnabled = config.microsoft.enabled !== false;
 const tenantId = config.microsoft.tenantId;
 const clientId = config.microsoft.clientId;
 const lowerTenant = tenantId ? tenantId.toLowerCase() : "";
 const validateIssuer = tenantId && !["common", "organizations", "consumers"].includes(lowerTenant);
-const issuer = tenantId ? `https://login.microsoftonline.com/${tenantId}/v2.0` : "";
-const jwksUrl = issuer ? new URL(`${issuer}/discovery/v2.0/keys`) : null;
+const authorityBase = tenantId ? `https://login.microsoftonline.com/${tenantId}` : "";
+const issuer = authorityBase ? `${authorityBase}/v2.0` : "";
+const jwksUrl = authorityBase ? new URL(`${authorityBase}/discovery/v2.0/keys`) : null;
 const jwks = jwksUrl ? createRemoteJWKSet(jwksUrl) : null;
 
 async function verifyMicrosoftToken(token) {
+  if (!microsoftEnabled) {
+    const error = new Error("Microsoft auth is disabled.");
+    error.status = 501;
+    throw error;
+  }
+
   if (!clientId || !tenantId) {
     const error = new Error("Microsoft auth is not configured.");
     error.status = 501;

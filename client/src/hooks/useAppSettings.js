@@ -6,6 +6,7 @@ const STORAGE_KEY = "appSettings";
 
 const DEFAULT_SETTINGS = {
   sidebarOrientation: "vertical",
+  localAuthEnabled: true,
   featureFlags: {
     enableUserSettings: true,
     enableUserProfile: true,

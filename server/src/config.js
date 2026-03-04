@@ -15,10 +15,20 @@ for (const envPath of envCandidates) {
   }
 }
 
+function pickEnv(...values) {
+  for (const value of values) {
+    if (typeof value === "string" && value.trim()) {
+      return value.trim();
+    }
+  }
+  return "";
+}
+
 const config = {
   env: process.env.ENVIRONMENT || "Local",
   port: Number(process.env.EXPRESS_PORT || 5010),
   corsOrigin: process.env.CORS_ORIGIN || "http://localhost:5173",
+  localAuthEnabled: process.env.LOCAL_AUTH_ENABLED !== "0",
   db: {
     server: process.env.DB_SERVER || "",
     port: Number(process.env.DB_PORT || 1433),
@@ -30,9 +40,11 @@ const config = {
     commandTimeout: Number(process.env.DB_COMMAND_TIMEOUT || 30),
   },
   microsoft: {
-    clientId: process.env.MICROSOFT_CLIENT_ID || "",
-    clientSecret: process.env.MICROSOFT_CLIENT_SECRET || "",
-    tenantId: process.env.MICROSOFT_TENANT_ID || "",
+    enabled: process.env.MICROSOFT_AUTH_ENABLED !== "0",
+    clientId: pickEnv(process.env.INLOG_MICROSOFT_CLIENT_ID, process.env.MICROSOFT_CLIENT_ID),
+    clientSecret: pickEnv(process.env.INLOG_MICROSOFT_CLIENT_SECRET, process.env.MICROSOFT_CLIENT_SECRET),
+    tenantId: pickEnv(process.env.INLOG_MICROSOFT_TENANT_ID, process.env.MICROSOFT_TENANT_ID),
+    redirectUri: pickEnv(process.env.MICROSOFT_AUTH_REDIRECT_URI, process.env.INLOG_MICROSOFT_REDIRECT_URI),
   },
   appUserEmail: process.env.APP_DEFAULT_USER_EMAIL || "",
   autoLoginAdminEmail: process.env.AUTO_LOGIN_ADMIN_EMAIL || "",
