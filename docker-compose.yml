@@ -1,0 +1,65 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: template-react-app:latest
+    restart: unless-stopped
+    ports:
+      - "${EXPRESS_PORT:-5010}:${EXPRESS_PORT:-5010}"
+    environment:
+      ENVIRONMENT: "${ENVIRONMENT:-Production}"
+      EXPRESS_PORT: "${EXPRESS_PORT:-5010}"
+      CORS_ORIGIN: "${CORS_ORIGIN}"
+      TRUST_PROXY: "${TRUST_PROXY:-1}"
+      CSRF_ENABLED: "${CSRF_ENABLED:-1}"
+
+      SESSION_SECRET: "${SESSION_SECRET}"
+      SESSION_COOKIE_NAME: "${SESSION_COOKIE_NAME:-session_id}"
+      SESSION_DURATION_HOURS: "${SESSION_DURATION_HOURS:-24}"
+
+      DB_SERVER: "${DB_SERVER}"
+      DB_PORT: "${DB_PORT:-1433}"
+      DB_NAME: "${DB_NAME}"
+      DB_USER: "${DB_USER}"
+      DB_PASSWORD: "${DB_PASSWORD}"
+      DB_MAX_CONNECTIONS: "${DB_MAX_CONNECTIONS:-10}"
+      DB_CONNECTION_TIMEOUT: "${DB_CONNECTION_TIMEOUT:-30}"
+      DB_COMMAND_TIMEOUT: "${DB_COMMAND_TIMEOUT:-30}"
+      DB_ENCRYPT: "${DB_ENCRYPT:-1}"
+      DB_TRUST_SERVER_CERTIFICATE: "${DB_TRUST_SERVER_CERTIFICATE:-0}"
+
+      LOCAL_AUTH_ENABLED: "${LOCAL_AUTH_ENABLED:-1}"
+      MICROSOFT_AUTH_ENABLED: "${MICROSOFT_AUTH_ENABLED:-0}"
+      MICROSOFT_CLIENT_ID: "${MICROSOFT_CLIENT_ID:-}"
+      MICROSOFT_CLIENT_SECRET: "${MICROSOFT_CLIENT_SECRET:-}"
+      MICROSOFT_TENANT_ID: "${MICROSOFT_TENANT_ID:-}"
+      INLOG_MICROSOFT_CLIENT_ID: "${INLOG_MICROSOFT_CLIENT_ID:-}"
+      INLOG_MICROSOFT_CLIENT_SECRET: "${INLOG_MICROSOFT_CLIENT_SECRET:-}"
+      INLOG_MICROSOFT_TENANT_ID: "${INLOG_MICROSOFT_TENANT_ID:-}"
+      INLOG_MICROSOFT_REDIRECT_URI: "${INLOG_MICROSOFT_REDIRECT_URI:-}"
+      MICROSOFT_AUTH_REDIRECT_URI: "${MICROSOFT_AUTH_REDIRECT_URI:-}"
+
+      APP_DEFAULT_USER_EMAIL: "${APP_DEFAULT_USER_EMAIL:-}"
+      AUTO_LOGIN_ENABLED: "${AUTO_LOGIN_ENABLED:-0}"
+      AUTO_LOGIN_ADMIN_ENABLED: "${AUTO_LOGIN_ADMIN_ENABLED:-0}"
+      AUTO_LOGIN_USER_ENABLED: "${AUTO_LOGIN_USER_ENABLED:-0}"
+      AUTO_LOGIN_ADMIN_EMAIL: "${AUTO_LOGIN_ADMIN_EMAIL:-}"
+      AUTO_LOGIN_USER_EMAIL: "${AUTO_LOGIN_USER_EMAIL:-}"
+
+      FEATURE_ENABLE_USER_SETTINGS: "${FEATURE_ENABLE_USER_SETTINGS:-1}"
+      FEATURE_ENABLE_USER_PROFILE: "${FEATURE_ENABLE_USER_PROFILE:-1}"
+
+      VITE_PORT: "${VITE_PORT:-}"
+      VITE_ORIGIN: "${VITE_ORIGIN:-}"
+
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "node -e \"const http=require('http');const p=process.env.EXPRESS_PORT||5010;http.get({host:'127.0.0.1',port:p,path:'/api/health'},r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1));\"",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
