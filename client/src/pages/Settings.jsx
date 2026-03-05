@@ -22,8 +22,7 @@ function isValidHex(value) {
   return /^#[0-9a-fA-F]{6}$/.test(value);
 }
 
-export default function Settings() {
-  const { settings, updateSettings } = useThemeSettings();
+export function SettingsView({ settings, updateSettings }) {
   const [accentInput, setAccentInput] = useState(settings.accentColor);
 
   useEffect(() => {
@@ -163,4 +162,9 @@ export default function Settings() {
       </div>
     </div>
   );
+}
+
+export default function Settings() {
+  const { settings, updateSettings } = useThemeSettings();
+  return <SettingsView settings={settings} updateSettings={updateSettings} />;
 }
