@@ -54,10 +54,8 @@ dotnet run
   - `/api/roles/permissions` (POST)
   - `/api/roles/order` (POST)
   - `/api/roles/:id/delete` (POST)
-  - `/api/stamgegevens/bedrijven` (GET/POST/PUT/DELETE)
   - `/api/stamgegevens/statussen` (GET/POST/PUT/DELETE)
-  - `/api/stamgegevens/fases` (GET/POST/PUT/DELETE)
-  - `/api/stamgegevens/*/order` (POST)
+  - `/api/stamgegevens/statussen/order` (POST)
 - .NET endpoints:
   - `/api/db/health`
   - `/api/db/info`

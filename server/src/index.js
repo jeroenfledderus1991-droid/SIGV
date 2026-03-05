@@ -10,6 +10,7 @@ const config = require("./config");
 const db = require("./db");
 const { requireMicrosoftAuth, verifyMicrosoftToken } = require("./microsoftAuth");
 const auth = require("./auth");
+const { registerStamgegevensRoutes } = require("./routes/stamgegevensRoutes");
 
 const isProduction = (config.env || "").toLowerCase() === "production";
 const SESSION_SECRET_MIN_LENGTH = 32;
@@ -27,7 +28,6 @@ const PAGE_PATTERNS = [
   { name: "Accountbeheer", pattern: "/accounts*" },
   { name: "Rolbeheer", pattern: "/rollen*" },
   { name: "Stamgegevens Beheer", pattern: "/stamgegevens*" },
-  { name: "Stamgegevens Admin", pattern: "/stamgegevens/admin*" },
   { name: "Feature flags", pattern: "/feature-flags*" },
   { name: "Instellingen", pattern: "/settings*" },
   { name: "Profiel", pattern: "/profiel*" },
@@ -1341,146 +1341,12 @@ app.post("/api/roles/order", requireAuth, requirePermission("/rollen*"), async (
   }
 });
 
-async function listStamgegevens(res, table, columns) {
-  try {
-    const pool = await db.getPool();
-    const result = await pool
-      .request()
-      .query(`SELECT ${columns.join(", ")} FROM dbo.${table} ORDER BY volgorde, id`);
-    res.json(result.recordset || []);
-  } catch (error) {
-    res.status(500).json({ error: `Failed to load ${table}.` });
-  }
-}
-
-async function upsertStamgegevens(res, table, columns, data, id) {
-  try {
-    const pool = await db.getPool();
-    const request = pool.request();
-    const setClauses = [];
-    for (const column of columns) {
-      request.input(column, data[column] ?? null);
-      setClauses.push(`${column} = @${column}`);
-    }
-    if (id) {
-      request.input("id", id);
-      await request.query(
-        `UPDATE dbo.${table} SET ${setClauses.join(", ")}, updated_at = GETDATE() WHERE id = @id`
-      );
-    } else {
-      const insertColumns = columns.join(", ");
-      const insertValues = columns.map((column) => `@${column}`).join(", ");
-      await request.query(`
-        INSERT INTO dbo.${table} (${insertColumns}, volgorde, created_at)
-        VALUES (${insertValues}, (SELECT ISNULL(MAX(volgorde), 0) + 1 FROM dbo.${table}), GETDATE())
-      `);
-    }
-    res.json({ success: true });
-  } catch (error) {
-    res.status(500).json({ error: `Failed to save ${table}.` });
-  }
-}
-
-async function deleteStamgegevens(res, table, id) {
-  try {
-    const pool = await db.getPool();
-    const request = pool.request();
-    request.input("id", id);
-    await request.query(`DELETE FROM dbo.${table} WHERE id = @id`);
-    res.json({ success: true });
-  } catch (error) {
-    res.status(500).json({ error: `Failed to delete ${table}.` });
-  }
-}
-
-async function updateOrder(res, table, order) {
-  try {
-    const pool = await db.getPool();
-    for (const entry of order) {
-      const request = pool.request();
-      request.input("id", entry.id);
-      request.input("volgorde", entry.volgorde);
-      await request.query(`UPDATE dbo.${table} SET volgorde = @volgorde WHERE id = @id`);
-    }
-    res.json({ success: true });
-  } catch (error) {
-    res.status(500).json({ error: `Failed to update ${table} order.` });
-  }
-}
-
-app.get("/api/stamgegevens/bedrijven", requireAuth, requirePermission("/stamgegevens*"), async (req, res) => {
-  if (!(await ensureDbConfigured(res))) return;
-  listStamgegevens(res, "tbl_bedrijven", ["id", "naam", "status", "volgorde"]);
-});
-
-app.post("/api/stamgegevens/bedrijven", requireAuth, requirePermission("/stamgegevens*"), async (req, res) => {
-  if (!(await ensureDbConfigured(res))) return;
-  upsertStamgegevens(res, "tbl_bedrijven", ["naam", "status"], req.body, null);
-});
-
-app.put("/api/stamgegevens/bedrijven/:id", requireAuth, requirePermission("/stamgegevens*"), async (req, res) => {
-  if (!(await ensureDbConfigured(res))) return;
-  upsertStamgegevens(res, "tbl_bedrijven", ["naam", "status"], req.body, Number(req.params.id));
-});
-
-app.delete("/api/stamgegevens/bedrijven/:id", requireAuth, requirePermission("/stamgegevens*"), async (req, res) => {
-  if (!(await ensureDbConfigured(res))) return;
-  deleteStamgegevens(res, "tbl_bedrijven", Number(req.params.id));
-});
-
-app.post("/api/stamgegevens/bedrijven/order", requireAuth, requirePermission("/stamgegevens*"), async (req, res) => {
-  if (!(await ensureDbConfigured(res))) return;
-  updateOrder(res, "tbl_bedrijven", req.body?.order || []);
-});
-
-app.get("/api/stamgegevens/statussen", requireAuth, requirePermission("/stamgegevens*"), async (req, res) => {
-  if (!(await ensureDbConfigured(res))) return;
-  listStamgegevens(res, "tbl_statussen", ["id", "status", "volgorde"]);
-});
-
-app.post("/api/stamgegevens/statussen", requireAuth, requirePermission("/stamgegevens*"), async (req, res) => {
-  if (!(await ensureDbConfigured(res))) return;
-  upsertStamgegevens(res, "tbl_statussen", ["status"], req.body, null);
-});
-
-app.put("/api/stamgegevens/statussen/:id", requireAuth, requirePermission("/stamgegevens*"), async (req, res) => {
-  if (!(await ensureDbConfigured(res))) return;
-  upsertStamgegevens(res, "tbl_statussen", ["status"], req.body, Number(req.params.id));
-});
-
-app.delete("/api/stamgegevens/statussen/:id", requireAuth, requirePermission("/stamgegevens*"), async (req, res) => {
-  if (!(await ensureDbConfigured(res))) return;
-  deleteStamgegevens(res, "tbl_statussen", Number(req.params.id));
-});
-
-app.post("/api/stamgegevens/statussen/order", requireAuth, requirePermission("/stamgegevens*"), async (req, res) => {
-  if (!(await ensureDbConfigured(res))) return;
-  updateOrder(res, "tbl_statussen", req.body?.order || []);
-});
-
-app.get("/api/stamgegevens/fases", requireAuth, requirePermission("/stamgegevens*"), async (req, res) => {
-  if (!(await ensureDbConfigured(res))) return;
-  listStamgegevens(res, "tbl_fases", ["id", "fases", "getal", "volgorde"]);
-});
-
-app.post("/api/stamgegevens/fases", requireAuth, requirePermission("/stamgegevens*"), async (req, res) => {
-  if (!(await ensureDbConfigured(res))) return;
-  upsertStamgegevens(res, "tbl_fases", ["fases", "getal"], req.body, null);
-});
-
-app.put("/api/stamgegevens/fases/:id", requireAuth, requirePermission("/stamgegevens*"), async (req, res) => {
-  if (!(await ensureDbConfigured(res))) return;
-  upsertStamgegevens(res, "tbl_fases", ["fases", "getal"], req.body, Number(req.params.id));
-});
-
-app.delete("/api/stamgegevens/fases/:id", requireAuth, requirePermission("/stamgegevens*"), async (req, res) => {
-  if (!(await ensureDbConfigured(res))) return;
-  deleteStamgegevens(res, "tbl_fases", Number(req.params.id));
-});
-
-app.post("/api/stamgegevens/fases/order", requireAuth, requirePermission("/stamgegevens*"), async (req, res) => {
-  if (!(await ensureDbConfigured(res))) return;
-  updateOrder(res, "tbl_fases", req.body?.order || []);
+registerStamgegevensRoutes({
+  app,
+  db,
+  ensureDbConfigured,
+  requireAuth,
+  requirePermission,
 });
 
 app.get("/api/accounts/users", requireAuth, requirePermission("/accounts*"), async (req, res) => {

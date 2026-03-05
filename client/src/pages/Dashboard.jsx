@@ -22,7 +22,7 @@ export default function Dashboard() {
           <div className="card-body">
             <h4>Stamgegevens</h4>
             <p className="text-secondary">
-              Bedrijven, statussen en fases beheren via standaard tabellen.
+              Statussen beheren via standaard tabellen.
             </p>
           </div>
         </div>

@@ -62,7 +62,7 @@ Table names and column names are interpolated directly into SQL strings without 
 .query(`UPDATE dbo.${table} SET volgorde = @volgorde WHERE id = @id`);
 ```
 
-The value and `id` fields _are_ parameterized, but the structural parts of the query are not. Any user who holds the `/stamgegevens*` permission can send `table = "tbl_bedrijven; DROP TABLE tbl_users --"`.
+The value and `id` fields _are_ parameterized, but the structural parts of the query are not. Any user who holds the `/stamgegevens*` permission can send `table = "tbl_statussen; DROP TABLE tbl_users --"`.
 
 **Fix:** add a compile-time whitelist of permitted table names and allowed column sets and reject anything not in that list before building the query.
 
