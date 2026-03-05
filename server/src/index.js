@@ -56,17 +56,9 @@ const DEFAULT_SETTINGS = {
   sidebar_variant: "accent-gradient",
   gradient_intensity: 30,
 };
-const AUTO_LOGIN_MASTER_FLAG = "ENABLE_AUTO_LOGINS";
-const AUTO_LOGIN_ADMIN_FLAG = "ENABLE_ADMIN_AUTO_LOGIN";
-const AUTO_LOGIN_USER_FLAG = "ENABLE_USER_AUTO_LOGIN";
 const SIDEBAR_HEADER_WHITE_FLAG = "ENABLE_SIDEBAR_HEADER_WHITE";
 const SUPER_ADMIN_ROLE_NAME = "Super Admin";
 const EESA_SUPER_ADMIN_EMAIL = "eesa@admin.local";
-const AUTO_LOGIN_FLAG_NAMES = [
-  AUTO_LOGIN_MASTER_FLAG,
-  AUTO_LOGIN_ADMIN_FLAG,
-  AUTO_LOGIN_USER_FLAG,
-];
 
 const CLIENT_DIST_DIR = path.resolve(__dirname, "..", "..", "client", "dist");
 const CLIENT_DIST_INDEX = path.join(CLIENT_DIST_DIR, "index.html");
@@ -123,6 +115,16 @@ app.use((req, res, next) => {
 });
 app.use(helmet({ contentSecurityPolicy: false }));
 app.use((req, res, next) => {
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("X-Frame-Options", "SAMEORIGIN");
+  res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+  res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=()");
+  if (isProduction) {
+    res.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+  }
+  next();
+});
+app.use((req, res, next) => {
   res.setHeader("Content-Security-Policy", buildCspHeader(isProduction, res.locals.cspNonce));
   next();
 });
@@ -147,9 +149,16 @@ registerCsrfProtection({
 });
 
 runStartupChecks({
+  isLocalLike: config.isLocalLike,
   isProduction,
   sessionSecret: config.sessionSecret,
   minSessionSecretLength: SESSION_SECRET_MIN_LENGTH,
+  autoLoginEnabled: config.autoLoginEnabled,
+  autoLoginAdminEnabled: config.autoLoginAdminEnabled,
+  autoLoginUserEnabled: config.autoLoginUserEnabled,
+  autoLoginAdminEmail: config.autoLoginAdminEmail,
+  autoLoginUserEmail: config.autoLoginUserEmail,
+  demoSuperAdminEmail: EESA_SUPER_ADMIN_EMAIL,
 });
 
 const {
@@ -189,10 +198,6 @@ const {
   hasLocalAuth,
   hasMicrosoftAuth,
   sidebarHeaderWhiteFlag: SIDEBAR_HEADER_WHITE_FLAG,
-  autoLoginFlagNames: AUTO_LOGIN_FLAG_NAMES,
-  autoLoginMasterFlag: AUTO_LOGIN_MASTER_FLAG,
-  autoLoginAdminFlag: AUTO_LOGIN_ADMIN_FLAG,
-  autoLoginUserFlag: AUTO_LOGIN_USER_FLAG,
   loadPermissions,
 });
 
@@ -278,12 +283,6 @@ registerFeatureFlagRoutes({
   ensureDbConfigured,
   requireAuth,
   requirePermission,
-  loadFeatureFlags,
-  AUTO_LOGIN_MASTER_FLAG,
-  AUTO_LOGIN_ADMIN_FLAG,
-  AUTO_LOGIN_USER_FLAG,
-  VITE_ORIGIN,
-  isProduction,
 });
 
 registerClientShellRoutes({

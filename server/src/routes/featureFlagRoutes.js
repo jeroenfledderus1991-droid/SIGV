@@ -4,12 +4,6 @@ function registerFeatureFlagRoutes({
   ensureDbConfigured,
   requireAuth,
   requirePermission,
-  loadFeatureFlags,
-  AUTO_LOGIN_MASTER_FLAG,
-  AUTO_LOGIN_ADMIN_FLAG,
-  AUTO_LOGIN_USER_FLAG,
-  VITE_ORIGIN,
-  isProduction,
 }) {
   app.get("/api/feature-flags", requireAuth, requirePermission("/feature-flags*"), async (req, res) => {
     if (!(await ensureDbConfigured(res))) return;
@@ -94,65 +88,6 @@ function registerFeatureFlagRoutes({
     }
   });
 
-  app.get(/^\/auto_log=?([12])=(true|false)$/i, async (req, res) => {
-    if (!(await ensureDbConfigured(res))) return;
-    try {
-      const flagIndex = req.params?.[0];
-      const enabledRaw = req.params?.[1];
-      const flagMap = {
-        1: AUTO_LOGIN_ADMIN_FLAG,
-        2: AUTO_LOGIN_USER_FLAG,
-      };
-      const flagName = flagMap[Number(flagIndex)];
-      if (!flagName) {
-        return res.status(400).json({ error: "Invalid auto login flag." });
-      }
-
-      const flags = await loadFeatureFlags([AUTO_LOGIN_MASTER_FLAG]);
-      if (!flags[AUTO_LOGIN_MASTER_FLAG]) {
-        return res.status(403).json({ error: "Auto logins are disabled." });
-      }
-
-      const enabled = String(enabledRaw).toLowerCase() === "true";
-      const pool = await db.getPool();
-      const request = pool.request();
-      request.input("flag_name", flagName);
-      request.input("enabled", enabled ? 1 : 0);
-      await request.query(`
-        IF EXISTS (SELECT 1 FROM dbo.tbl_feature_flags WHERE flag_name = @flag_name)
-          UPDATE dbo.tbl_feature_flags
-          SET enabled = @enabled, updated_at = SYSDATETIME()
-          WHERE flag_name = @flag_name
-        ELSE
-          INSERT INTO dbo.tbl_feature_flags (flag_name, enabled, page_key, description, updated_at)
-          VALUES (@flag_name, @enabled, 'SYSTEM', 'Auto-login toggled via special link', SYSDATETIME())
-      `);
-
-      if (enabled) {
-        const otherFlag = flagName === AUTO_LOGIN_ADMIN_FLAG ? AUTO_LOGIN_USER_FLAG : AUTO_LOGIN_ADMIN_FLAG;
-        const disableOther = pool.request();
-        disableOther.input("flag_name", otherFlag);
-        await disableOther.query(`
-          UPDATE dbo.tbl_feature_flags
-          SET enabled = 0, updated_at = SYSDATETIME()
-          WHERE flag_name = @flag_name
-        `);
-      }
-
-      const acceptsJson = (req.headers.accept || "").includes("application/json");
-      if (acceptsJson) {
-        return res.json({ success: true, flag: flagName, enabled });
-      }
-      const target = VITE_ORIGIN || "/";
-      return res.redirect(target);
-    } catch (error) {
-      const payload = { error: "Failed to update auto login flag." };
-      if (!isProduction) {
-        payload.detail = error?.message || String(error);
-      }
-      return res.status(500).json(payload);
-    }
-  });
 }
 
 module.exports = { registerFeatureFlagRoutes };

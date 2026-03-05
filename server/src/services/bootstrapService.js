@@ -10,10 +10,6 @@ function createBootstrapService({
   hasLocalAuth,
   hasMicrosoftAuth,
   sidebarHeaderWhiteFlag,
-  autoLoginFlagNames,
-  autoLoginMasterFlag,
-  autoLoginAdminFlag,
-  autoLoginUserFlag,
   loadPermissions,
 }) {
   async function loadFeatureFlags(flagNames) {
@@ -61,12 +57,11 @@ function createBootstrapService({
   }
 
   async function resolveAutoLoginTarget() {
-    const flags = await loadFeatureFlags(autoLoginFlagNames);
-    if (!flags[autoLoginMasterFlag]) return null;
-    if (flags[autoLoginAdminFlag]) {
+    if (!config.autoLoginEnabled) return null;
+    if (config.autoLoginAdminEnabled) {
       return { email: config.autoLoginAdminEmail, type: "admin" };
     }
-    if (flags[autoLoginUserFlag]) {
+    if (config.autoLoginUserEnabled) {
       return { email: config.autoLoginUserEmail, type: "user" };
     }
     return null;

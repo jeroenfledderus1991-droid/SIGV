@@ -32,6 +32,33 @@ function registerAuthRoutes({
     return next();
   }
 
+  async function getFailedAttempts(pool, identifier, ipAddress, windowMinutes) {
+    const rateCheck = pool.request();
+    rateCheck.input("identifier", identifier);
+    rateCheck.input("ip_address", ipAddress);
+    rateCheck.input("window_minutes", windowMinutes);
+    const rateResult = await rateCheck.query(`
+      SELECT COUNT(*) AS failed_count
+      FROM dbo.tbl_auth_attempts
+      WHERE success = 0
+        AND created_at > DATEADD(MINUTE, -@window_minutes, SYSDATETIME())
+        AND (identifier = @identifier OR ip_address = @ip_address)
+    `);
+    return rateResult.recordset[0]?.failed_count || 0;
+  }
+
+  async function logAuthAttempt(pool, { identifier, success, ipAddress, userAgent }) {
+    const logAttempt = pool.request();
+    logAttempt.input("identifier", identifier);
+    logAttempt.input("success", success ? 1 : 0);
+    logAttempt.input("ip_address", ipAddress);
+    logAttempt.input("user_agent", userAgent?.slice(0, 255) || "");
+    await logAttempt.query(`
+      INSERT INTO dbo.tbl_auth_attempts (identifier, success, ip_address, user_agent)
+      VALUES (@identifier, @success, @ip_address, @user_agent)
+    `);
+  }
+
   app.get("/api/auth/microsoft/start", async (req, res) => {
     if (!(await ensureDbConfigured(res))) return;
     if (!hasMicrosoftAuth) {
@@ -161,19 +188,8 @@ function registerAuthRoutes({
 
       const rateWindowMinutes = 15;
       const maxAttempts = 5;
-      const ip = req.headers["x-forwarded-for"]?.split(",")[0]?.trim() || req.ip || "";
-      const rateCheck = pool.request();
-      rateCheck.input("identifier", identifier);
-      rateCheck.input("ip_address", ip);
-      rateCheck.input("window_minutes", rateWindowMinutes);
-      const rateResult = await rateCheck.query(`
-        SELECT COUNT(*) AS failed_count
-        FROM dbo.tbl_auth_attempts
-        WHERE success = 0
-          AND created_at > DATEADD(MINUTE, -@window_minutes, SYSDATETIME())
-          AND (identifier = @identifier OR ip_address = @ip_address)
-      `);
-      const failedCount = rateResult.recordset[0]?.failed_count || 0;
+      const ipAddress = (req.ip || "").trim();
+      const failedCount = await getFailedAttempts(pool, identifier, ipAddress, rateWindowMinutes);
       if (failedCount >= maxAttempts) {
         return res.status(429).json({ error: "Te veel mislukte pogingen. Probeer later opnieuw." });
       }
@@ -187,15 +203,12 @@ function registerAuthRoutes({
       `);
       const user = result.recordset[0];
       if (!user || !auth.verifyScryptHash(password, user.password_hash)) {
-        const logFail = pool.request();
-        logFail.input("identifier", identifier);
-        logFail.input("success", 0);
-        logFail.input("ip_address", ip);
-        logFail.input("user_agent", req.headers["user-agent"]?.slice(0, 255) || "");
-        await logFail.query(`
-          INSERT INTO dbo.tbl_auth_attempts (identifier, success, ip_address, user_agent)
-          VALUES (@identifier, @success, @ip_address, @user_agent)
-        `);
+        await logAuthAttempt(pool, {
+          identifier,
+          success: false,
+          ipAddress,
+          userAgent: req.headers["user-agent"] || "",
+        });
         return res.status(401).json({ error: "Ongeldige inloggegevens." });
       }
 
@@ -207,15 +220,12 @@ function registerAuthRoutes({
         setCsrfCookie(res, csrfToken);
       }
 
-      const logSuccess = pool.request();
-      logSuccess.input("identifier", identifier);
-      logSuccess.input("success", 1);
-      logSuccess.input("ip_address", ip);
-      logSuccess.input("user_agent", req.headers["user-agent"]?.slice(0, 255) || "");
-      await logSuccess.query(`
-        INSERT INTO dbo.tbl_auth_attempts (identifier, success, ip_address, user_agent)
-        VALUES (@identifier, @success, @ip_address, @user_agent)
-      `);
+      await logAuthAttempt(pool, {
+        identifier,
+        success: true,
+        ipAddress,
+        userAgent: req.headers["user-agent"] || "",
+      });
 
       const update = pool.request();
       update.input("user_id", user.user_id);
@@ -287,6 +297,15 @@ function registerAuthRoutes({
 
     try {
       const pool = await db.getPool();
+      const rateWindowMinutes = 15;
+      const maxAttempts = 5;
+      const ipAddress = (req.ip || "").trim();
+      const rateIdentifier = `register:${email.toLowerCase() || username.toLowerCase()}`;
+      const failedCount = await getFailedAttempts(pool, rateIdentifier, ipAddress, rateWindowMinutes);
+      if (failedCount >= maxAttempts) {
+        return res.status(429).json({ error: "Te veel pogingen. Probeer later opnieuw." });
+      }
+
       const check = pool.request();
       check.input("username", username);
       check.input("email", email);
@@ -294,6 +313,12 @@ function registerAuthRoutes({
         SELECT TOP 1 user_id FROM dbo.tbl_users WHERE username = @username OR email = @email
       `);
       if (existing.recordset.length) {
+        await logAuthAttempt(pool, {
+          identifier: rateIdentifier,
+          success: false,
+          ipAddress,
+          userAgent: req.headers["user-agent"] || "",
+        });
         return res.status(409).json({ error: "Gebruiker bestaat al." });
       }
 
@@ -311,6 +336,13 @@ function registerAuthRoutes({
         VALUES (@username, @email, @password_hash, @voornaam, @achternaam, @role, @is_super_admin, GETDATE())
       `);
 
+      await logAuthAttempt(pool, {
+        identifier: rateIdentifier,
+        success: true,
+        ipAddress,
+        userAgent: req.headers["user-agent"] || "",
+      });
+
       return res.json({ success: true });
     } catch (error) {
       return res.status(500).json({ error: "Registreren mislukt." });
@@ -325,24 +357,36 @@ function registerAuthRoutes({
     }
 
     try {
+      const rateWindowMinutes = 15;
+      const maxAttempts = 5;
+      const ipAddress = (req.ip || "").trim();
+      const rateIdentifier = `forgot:${identifier}`;
+      const pool = await db.getPool();
+      const failedCount = await getFailedAttempts(pool, rateIdentifier, ipAddress, rateWindowMinutes);
+      if (failedCount >= maxAttempts) {
+        return res.status(429).json({ error: "Te veel pogingen. Probeer later opnieuw." });
+      }
+
       const token = crypto.randomBytes(24).toString("base64url");
       const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
-      const pool = await db.getPool();
       const request = pool.request();
       request.input("identifier", identifier);
       request.input("token", tokenHash);
       await request.query(`
         UPDATE dbo.tbl_users
         SET reset_token = @token,
-            reset_token_expires = DATEADD(HOUR, 24, GETDATE())
+            reset_token_expires = DATEADD(HOUR, 2, GETDATE())
         WHERE email = @identifier OR username = @identifier
       `);
 
-      const payload = { success: true };
-      if (!isProduction) {
-        payload.resetToken = token;
-      }
-      return res.json(payload);
+      await logAuthAttempt(pool, {
+        identifier: rateIdentifier,
+        success: true,
+        ipAddress,
+        userAgent: req.headers["user-agent"] || "",
+      });
+
+      return res.json({ success: true });
     } catch (error) {
       return res.status(500).json({ error: "Reset link genereren mislukt." });
     }
