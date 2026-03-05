@@ -13,8 +13,8 @@ const poolConfig = {
     idleTimeoutMillis: 30000,
   },
   options: {
-    encrypt: false,
-    trustServerCertificate: true,
+    encrypt: config.db.encrypt,
+    trustServerCertificate: config.db.trustServerCertificate,
   },
   connectionTimeout: config.db.connectionTimeout * 1000,
   requestTimeout: config.db.commandTimeout * 1000,

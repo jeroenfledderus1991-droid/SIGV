@@ -24,8 +24,20 @@ function pickEnv(...values) {
   return "";
 }
 
+function envFlag(value, fallback) {
+  if (value === undefined || value === null || String(value).trim() === "") {
+    return fallback;
+  }
+  return String(value).trim().toLowerCase() === "1" || String(value).trim().toLowerCase() === "true";
+}
+
+const envName = process.env.ENVIRONMENT || "Local";
+const normalizedEnv = envName.trim().toLowerCase();
+const isProduction = normalizedEnv === "production";
+const isLocalLike = normalizedEnv === "local" || normalizedEnv === "development" || normalizedEnv === "dev";
+
 const config = {
-  env: process.env.ENVIRONMENT || "Local",
+  env: envName,
   port: Number(process.env.EXPRESS_PORT || 5010),
   corsOrigin: process.env.CORS_ORIGIN || "http://localhost:5173",
   localAuthEnabled: process.env.LOCAL_AUTH_ENABLED !== "0",
@@ -38,6 +50,8 @@ const config = {
     maxConnections: Number(process.env.DB_MAX_CONNECTIONS || 10),
     connectionTimeout: Number(process.env.DB_CONNECTION_TIMEOUT || 30),
     commandTimeout: Number(process.env.DB_COMMAND_TIMEOUT || 30),
+    encrypt: envFlag(process.env.DB_ENCRYPT, !isLocalLike),
+    trustServerCertificate: envFlag(process.env.DB_TRUST_SERVER_CERTIFICATE, isLocalLike),
   },
   microsoft: {
     enabled: process.env.MICROSOFT_AUTH_ENABLED !== "0",
@@ -53,7 +67,9 @@ const config = {
   sessionCookieName: process.env.SESSION_COOKIE_NAME || "session_id",
   sessionDurationHours: Number(process.env.SESSION_DURATION_HOURS || 24 * 7),
   trustProxy: process.env.TRUST_PROXY === "1",
-  csrfEnabled: process.env.CSRF_ENABLED === "1",
+  csrfEnabled: process.env.CSRF_ENABLED !== "0",
+  isProduction,
+  isLocalLike,
 };
 
 module.exports = config;
