@@ -11,16 +11,33 @@ This file captures the local rules and patterns for this template. Keep changes 
 
 ## Size and modularity rules
 - Keep files compact and focused. Prefer many small modules over one large "god file".
-- Soft limits:
-  - React pages/components/hooks: aim for <= 250 lines.
-  - CSS modules: aim for <= 200 lines.
-  - Service/helpers: aim for <= 300 lines.
-- Hard review threshold: if a file grows beyond ~400 lines, split it unless there is a clear architectural reason.
+- Thresholds (practical defaults for this repo):
+  - Preferred: <= 500 lines per file.
+  - Mandatory split: > 500 lines.
+  - Blocker threshold: > 700 lines (do not continue feature work until split is done).
+- Exception:
+  - Vendor/third-party files (for example `client/src/vendor/*`) are exempt unless explicitly requested.
 - Group styles by concern:
   - Shared styles in `client/src/styles/components.css`, `layout.css`, etc.
   - Page-specific styles in `client/src/styles/pages/*.css`.
   - Keep `client/src/styles/pages.css` as import hub only.
 - For any new feature, create/extend focused files instead of appending large sections to existing monolith files.
+
+## Composition model (vibecoding-safe)
+- Keep entry files thin:
+  - `server/src/index.js` and `client/src/App.jsx` are orchestration only.
+  - No heavy business logic in entry files.
+- Use feature-first folders:
+  - Backend: `server/src/routes/<feature>/` or focused modules under `server/src/routes/`.
+  - Frontend: `client/src/pages/<feature>/` with local components/hooks when needed.
+- Use explicit composition files:
+  - Backend: `register<Feature>Routes({ ...deps })` style is preferred.
+  - Frontend: `index.js` barrel files are allowed for page/component exports.
+- If a file is over threshold:
+  - Do not keep adding logic to that file.
+  - First split into feature modules, then continue feature work.
+- Dependency rule:
+  - Pass dependencies explicitly to route/service modules (object argument), avoid hidden globals.
 
 ## Project map
 - React (Vite): `client/`
@@ -34,7 +51,7 @@ This file captures the local rules and patterns for this template. Keep changes 
    - Add view in `sql/views/00X_create_vw_feature.sql` (read model).
    - Run `python sql/database_setup.py tables` and `python sql/database_setup.py views`.
 2) Express API
-   - Add endpoints in `server/src/index.js`.
+   - Add endpoints in a focused route module (registered from `server/src/index.js`).
    - Use `db.getPool()` and parameterized queries (no string concatenation).
    - Read via views for GETs and write via tables for POST/PUT/DELETE.
    - Guard routes with `requireAuth` and `requirePermission("/feature*")`.
@@ -53,7 +70,8 @@ This file captures the local rules and patterns for this template. Keep changes 
 
 ## Adding a new page (React + Express)
 1) API
-   - Define endpoints under `/api/<feature>` in `server/src/index.js`.
+   - Define endpoints under `/api/<feature>` in a focused route module.
+   - Register the module in `server/src/index.js`.
    - Add `requirePermission("/feature*")`.
 2) Permissions and navigation
    - Add a `PAGE_PATTERNS` entry so it appears in the role matrix.
@@ -69,6 +87,6 @@ This file captures the local rules and patterns for this template. Keep changes 
 - Keep computed columns in views, not in tables.
 
 ## Auth and settings
-- Session auth and CSRF are enforced in Express (`server/src/index.js`).
+- Session auth and CSRF are enforced in Express (security + route modules, wired in `server/src/index.js`).
 - App settings and feature flags are served from `/api/settings`.
 - React uses `useAuth`, `usePermissions`, `useThemeSettings`, `useAppSettings` hooks; keep that flow intact.
