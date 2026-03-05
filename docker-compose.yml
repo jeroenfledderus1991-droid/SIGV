@@ -1,12 +1,28 @@
 services:
-  app:
+  client:
     build:
       context: .
-      dockerfile: Dockerfile
-    image: template-react-app:latest
+      dockerfile: client/Dockerfile
+    image: template-react-client:latest
     restart: unless-stopped
+    depends_on:
+      server:
+        condition: service_healthy
     ports:
-      - "${EXPRESS_PORT:-5010}:${EXPRESS_PORT:-5010}"
+      - "${EXPRESS_PORT:-5010}:80"
+    environment:
+      EXPRESS_PORT: "${EXPRESS_PORT:-5010}"
+    networks:
+      - app_internal
+
+  server:
+    build:
+      context: .
+      dockerfile: server/Dockerfile
+    image: template-react-server:latest
+    restart: unless-stopped
+    expose:
+      - "${EXPRESS_PORT:-5010}"
     environment:
       ENVIRONMENT: "${ENVIRONMENT:-Production}"
       EXPRESS_PORT: "${EXPRESS_PORT:-5010}"
@@ -49,10 +65,6 @@ services:
 
       FEATURE_ENABLE_USER_SETTINGS: "${FEATURE_ENABLE_USER_SETTINGS:-1}"
       FEATURE_ENABLE_USER_PROFILE: "${FEATURE_ENABLE_USER_PROFILE:-1}"
-
-      VITE_PORT: "${VITE_PORT:-}"
-      VITE_ORIGIN: "${VITE_ORIGIN:-}"
-
     healthcheck:
       test:
         [
@@ -62,4 +74,41 @@ services:
       interval: 30s
       timeout: 5s
       retries: 5
-      start_period: 15s
+      start_period: 20s
+    networks:
+      - app_internal
+
+  dotnet:
+    build:
+      context: .
+      dockerfile: dotnet/TemplateApi/Dockerfile
+    image: template-react-dotnet:latest
+    restart: unless-stopped
+    expose:
+      - "${DOTNET_PORT:-5302}"
+    environment:
+      ENVIRONMENT: "${ENVIRONMENT:-Production}"
+      DOTNET_PORT: "${DOTNET_PORT:-5302}"
+      CORS_ORIGIN: "${CORS_ORIGIN}"
+
+      DB_SERVER: "${DB_SERVER}"
+      DB_PORT: "${DB_PORT:-1433}"
+      DB_NAME: "${DB_NAME}"
+      DB_USER: "${DB_USER}"
+      DB_PASSWORD: "${DB_PASSWORD}"
+
+      LOCAL_AUTH_ENABLED: "${LOCAL_AUTH_ENABLED:-1}"
+      MICROSOFT_AUTH_ENABLED: "${MICROSOFT_AUTH_ENABLED:-0}"
+      MICROSOFT_CLIENT_ID: "${MICROSOFT_CLIENT_ID:-}"
+      MICROSOFT_CLIENT_SECRET: "${MICROSOFT_CLIENT_SECRET:-}"
+      MICROSOFT_TENANT_ID: "${MICROSOFT_TENANT_ID:-}"
+      INLOG_MICROSOFT_CLIENT_ID: "${INLOG_MICROSOFT_CLIENT_ID:-}"
+      INLOG_MICROSOFT_CLIENT_SECRET: "${INLOG_MICROSOFT_CLIENT_SECRET:-}"
+      INLOG_MICROSOFT_TENANT_ID: "${INLOG_MICROSOFT_TENANT_ID:-}"
+      INLOG_MICROSOFT_REDIRECT_URI: "${INLOG_MICROSOFT_REDIRECT_URI:-}"
+    networks:
+      - app_internal
+
+networks:
+  app_internal:
+    driver: bridge

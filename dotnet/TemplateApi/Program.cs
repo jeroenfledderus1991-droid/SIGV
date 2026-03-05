@@ -89,7 +89,7 @@ if (dbConfigured)
 var dotnetPort = builder.Configuration["DOTNET_PORT"];
 if (!string.IsNullOrWhiteSpace(dotnetPort))
 {
-    builder.WebHost.UseUrls($"http://localhost:{dotnetPort}");
+    builder.WebHost.UseUrls($"http://0.0.0.0:{dotnetPort}");
 }
 
 var app = builder.Build();
