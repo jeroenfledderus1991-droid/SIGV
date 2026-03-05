@@ -6,3 +6,5 @@ client/dist/
 server/node_modules/
 dotnet/**/bin/
 dotnet/**/obj/
+__pycache__/
+*.pyc

@@ -2,7 +2,11 @@
   "name": "template-react-root",
   "private": true,
   "scripts": {
-    "dev": "concurrently \"npm --prefix client run dev\" \"npm --prefix server run dev\" \"dotnet run --project dotnet/TemplateApi\""
+    "dev": "concurrently \"npm --prefix client run dev\" \"npm --prefix server run dev\" \"dotnet run --project dotnet/TemplateApi\"",
+    "guardrails": "node scripts/guardrails/run.js",
+    "guardrails:strict": "node scripts/guardrails/run.js --strict-db-reads",
+    "guardrails:enforce": "node scripts/guardrails/run.js --enforce",
+    "guardrails:enforce:strict": "node scripts/guardrails/run.js --strict-db-reads --enforce"
   },
   "devDependencies": {
     "concurrently": "^8.2.2"
