@@ -70,9 +70,17 @@ export default function useAuth(enabled = true) {
       return;
     }
     let mounted = true;
-    if (!user) {
-      setLoading(true);
+    const immediateUser = getInitialUser();
+    if (immediateUser) {
+      setUser(immediateUser);
+      storeUser(immediateUser);
+      setLoading(false);
+      setReady(true);
+      return () => {
+        mounted = false;
+      };
     }
+    setLoading(true);
     setReady(false);
     loadBootstrap()
       .then((bootstrap) => {
@@ -100,5 +108,6 @@ export default function useAuth(enabled = true) {
     };
   }, [refresh, enabled]);
 
-  return { user, loading, refresh, logout, hasCache: Boolean(initialUserRef.current), ready };
+  const hasCache = Boolean(user || getInitialUser());
+  return { user, loading, refresh, logout, hasCache, ready };
 }

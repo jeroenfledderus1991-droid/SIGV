@@ -7,6 +7,7 @@ export default function Login() {
   const [logoFailed, setLogoFailed] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [loadingLabel, setLoadingLabel] = useState("Even geduld...");
   const [hasMicrosoftClient, setHasMicrosoftClient] = useState(false);
   const [localAuthEnabled, setLocalAuthEnabled] = useState(true);
   const appOrigin = import.meta.env.VITE_APP_ORIGIN || "";
@@ -71,14 +72,17 @@ export default function Login() {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
+    if (loading) return;
     const form = event.currentTarget;
     const formData = new FormData(form);
     const identifier = formData.get("identifier");
     const password = formData.get("password");
     setError("");
     setLoading(true);
+    setLoadingLabel("Even geduld...");
     try {
       const response = await postJson("/auth/login", { identifier, password });
+      setLoadingLabel("Sessie controleren...");
       if (response?.themeSettings) {
         localStorage.setItem("themeSettings", JSON.stringify(response.themeSettings));
         applyThemeSettings(response.themeSettings);
@@ -91,12 +95,13 @@ export default function Login() {
       if (appOrigin && window.location.origin !== appOrigin) {
         window.location.assign(target);
       } else {
-        navigate("/");
+        navigate("/", { replace: true });
       }
+      return;
     } catch (err) {
       setError(err.message || "Inloggen mislukt.");
-    } finally {
       setLoading(false);
+      setLoadingLabel("Even geduld...");
     }
   };
 
@@ -154,7 +159,7 @@ export default function Login() {
             </div>
 
             <button type="submit" className="auth-button" disabled={loading}>
-              {loading ? "Bezig..." : "Inloggen"} <i className="fas fa-arrow-right" />
+              {loading ? loadingLabel : "Inloggen"} <i className="fas fa-arrow-right" />
             </button>
           </form>
         )}

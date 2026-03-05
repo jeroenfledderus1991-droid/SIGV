@@ -27,28 +27,6 @@ const navItems = [
   { to: "/feature-flags", label: "Feature flags", icon: "fa-flag", permissions: ["/feature-flags*"] },
 ];
 
-function PageSkeleton() {
-  return (
-    <div className="page-skeleton">
-      <div className="skeleton card-skeleton">
-        <div className="skeleton-line line-lg" />
-        <div className="skeleton-line line-md" />
-      </div>
-      <div className="skeleton skeleton-grid">
-        <div className="skeleton-card" />
-        <div className="skeleton-card" />
-        <div className="skeleton-card" />
-      </div>
-      <div className="skeleton skeleton-table">
-        <div className="skeleton-line line-md" />
-        <div className="skeleton-line" />
-        <div className="skeleton-line" />
-        <div className="skeleton-line" />
-      </div>
-    </div>
-  );
-}
-
 function MicrosoftAuthBridge() {
   const location = useLocation();
 
@@ -231,6 +209,10 @@ function App() {
     return <Navigate to="/" replace />;
   }
 
+  if (!isAuthRoute && appLoading) {
+    return <div className="auth-gate-blank" aria-hidden="true" />;
+  }
+
   if (!isAuthRoute && !appLoading && effectiveAllowedPaths.length) {
     if (!isAllowedPath(location.pathname) && location.pathname !== firstAllowedPath) {
       return <Navigate to={firstAllowedPath} replace />;
@@ -376,49 +358,45 @@ function App() {
         </header>
 
         <div className="content-area">
-          {appLoading ? (
-            <PageSkeleton />
-          ) : (
-            <Routes>
-              <Route path="/" element={<Dashboard />} />
+          <Routes>
+            <Route path="/" element={<Dashboard />} />
+            <Route
+              path="/accounts"
+              element={isAllowedPath("/accounts") ? <Accountbeheer /> : <Navigate to={firstAllowedPath} replace />}
+            />
+            <Route
+              path="/rollen"
+              element={isAllowedPath("/rollen") ? <Rollen /> : <Navigate to={firstAllowedPath} replace />}
+            />
+            <Route
+              path="/stamgegevens"
+              element={isAllowedPath("/stamgegevens") ? <Stamgegevens /> : <Navigate to={firstAllowedPath} replace />}
+            />
+            <Route
+              path="/feature-flags"
+              element={
+                isAllowedPath("/feature-flags") ? <FeatureFlags /> : <Navigate to={firstAllowedPath} replace />
+              }
+            />
+            {enableUserSettings ? (
               <Route
-                path="/accounts"
-                element={isAllowedPath("/accounts") ? <Accountbeheer /> : <Navigate to={firstAllowedPath} replace />}
-              />
-              <Route
-                path="/rollen"
-                element={isAllowedPath("/rollen") ? <Rollen /> : <Navigate to={firstAllowedPath} replace />}
-              />
-              <Route
-                path="/stamgegevens"
-                element={isAllowedPath("/stamgegevens") ? <Stamgegevens /> : <Navigate to={firstAllowedPath} replace />}
-              />
-              <Route
-                path="/feature-flags"
+                path="/settings"
                 element={
-                  isAllowedPath("/feature-flags") ? <FeatureFlags /> : <Navigate to={firstAllowedPath} replace />
+                  isAllowedPath("/settings") ? <Settings /> : <Navigate to={firstAllowedPath} replace />
                 }
               />
-              {enableUserSettings ? (
-                <Route
-                  path="/settings"
-                  element={
-                    isAllowedPath("/settings") ? <Settings /> : <Navigate to={firstAllowedPath} replace />
-                  }
-                />
-              ) : (
-                <Route path="/settings" element={<Navigate to="/" replace />} />
-              )}
-              {enableUserProfile ? (
-                <Route
-                  path="/profiel"
-                  element={isAllowedPath("/profiel") ? <Profile /> : <Navigate to={firstAllowedPath} replace />}
-                />
-              ) : (
-                <Route path="/profiel" element={<Navigate to="/" replace />} />
-              )}
-            </Routes>
-          )}
+            ) : (
+              <Route path="/settings" element={<Navigate to="/" replace />} />
+            )}
+            {enableUserProfile ? (
+              <Route
+                path="/profiel"
+                element={isAllowedPath("/profiel") ? <Profile /> : <Navigate to={firstAllowedPath} replace />}
+              />
+            ) : (
+              <Route path="/profiel" element={<Navigate to="/" replace />} />
+            )}
+          </Routes>
         </div>
 
         <footer className="app-footer">Template UI | Live DB ready</footer>
