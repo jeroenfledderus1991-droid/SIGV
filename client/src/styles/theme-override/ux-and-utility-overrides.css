@@ -1,0 +1,267 @@
+﻿/* ===== ALERT FIXES ===== */
+.alert {
+    border-radius: var(--border-radius) !important;
+}
+
+.alert-success {
+    background-color: color-mix(in srgb, var(--success-color) 15%, var(--bg-secondary)) !important;
+    border-color: var(--success-color) !important;
+    color: color-mix(in srgb, var(--success-color) 80%, black) !important;
+}
+
+.alert-danger {
+    background-color: color-mix(in srgb, var(--danger-color) 15%, var(--bg-secondary)) !important;
+    border-color: var(--danger-color) !important;
+    color: color-mix(in srgb, var(--danger-color) 80%, black) !important;
+}
+
+.alert-warning {
+    background-color: color-mix(in srgb, var(--warning-color) 15%, var(--bg-secondary)) !important;
+    border-color: var(--warning-color) !important;
+    color: color-mix(in srgb, var(--warning-color) 80%, black) !important;
+}
+
+.alert-info {
+    background-color: color-mix(in srgb, var(--info-color) 15%, var(--bg-secondary)) !important;
+    border-color: var(--info-color) !important;
+    color: color-mix(in srgb, var(--info-color) 80%, black) !important;
+}
+
+/* ===== SCROLL BARS ===== */
+/* Webkit browsers */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--bg-tertiary);
+    border-radius: var(--border-radius);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--border-color);
+    border-radius: var(--border-radius);
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--accent-color);
+}
+
+/* Firefox */
+html {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-color) var(--bg-tertiary);
+}
+
+/* ===== SELECTION ===== */
+::selection {
+    background-color: color-mix(in srgb, var(--accent-color) 30%, transparent);
+    color: var(--text-primary);
+}
+
+::-moz-selection {
+    background-color: color-mix(in srgb, var(--accent-color) 30%, transparent);
+    color: var(--text-primary);
+}
+
+/* ===== FOCUS OUTLINES ===== */
+*:focus {
+    outline: 2px solid color-mix(in srgb, var(--accent-color) 50%, transparent);
+    outline-offset: 2px;
+}
+
+/* ===== LOADING SPINNERS ===== */
+.spinner-border, .spinner-grow {
+    color: var(--accent-color) !important;
+}
+
+/* ===== HOVER STATES ===== */
+.btn:hover, .card:hover, .list-group-item:hover {
+    transition: all 0.3s ease;
+}
+
+/* ===== SMOOTH TRANSITIONS ===== */
+* {
+    transition: background-color 0.3s ease, 
+                color 0.3s ease, 
+                border-color 0.3s ease,
+                box-shadow 0.3s ease !important;
+}
+
+/* Uitzondering voor elementen die geen transition moeten hebben */
+.no-transition,
+.no-transition * {
+    transition: none !important;
+}
+
+/* ===== PRINT STYLES ===== */
+@media print {
+    * {
+        background-color: white !important;
+        color: black !important;
+        box-shadow: none !important;
+        border-color: #ccc !important;
+    }
+}
+
+/* ===== ICON COLOR INHERITANCE ===== */
+.sidebar .menu-link i,
+.sidebar .user-info i,
+.sidebar .logout-btn i {
+    color: inherit !important;
+}
+
+/* Extra zeker maken dat alle sidebar iconen juiste kleur hebben */
+.sidebar i.fas,
+.sidebar i.far,
+.sidebar i.fab {
+    color: inherit !important;
+}
+
+/* ===== SIMPELE PREFIX SELECTOR ===== */
+.prefix-selector {
+    position: relative;
+    width: 100%;
+}
+
+.prefix-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.575rem 0.75rem;
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+    background-color: #ffffff;
+    cursor: pointer;
+    min-height: 38px;
+}
+
+.prefix-header:hover {
+    border-color: #007bff;
+    background-color: #f8f9fa;
+}
+
+.prefix-header i {
+    transition: transform 0.2s ease;
+    color: #6c757d;
+}
+
+.prefix-options {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+    background-color: #ffffff;
+    border: 1px solid #dee2e6;
+    border-top: none;
+    border-radius: 0 0 0.375rem 0.375rem;
+    max-height: 250px;
+    overflow-y: auto;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.prefix-option {
+    display: flex;
+    align-items: center;
+    padding: 0.5rem 0.75rem;
+    margin: 0;
+    cursor: pointer;
+    border-bottom: 1px solid #f1f3f4;
+    transition: background-color 0.15s ease;
+}
+
+.prefix-option:last-child {
+    border-bottom: none;
+}
+
+.prefix-option:hover {
+    background-color: #f8f9fa;
+}
+
+.prefix-option input[type="checkbox"] {
+    margin-right: 0.5rem;
+}
+
+.prefix-code {
+    font-weight: 600;
+    font-family: 'Courier New', monospace;
+    background-color: #e9ecef;
+    padding: 0.2rem 0.4rem;
+    border-radius: 0.25rem;
+    margin-right: 0.5rem;
+    min-width: 3rem;
+    text-align: center;
+    font-size: 0.85rem;
+}
+
+.prefix-name {
+    font-size: 0.9rem;
+    color: #495057;
+}
+
+/* Dark theme support */
+[data-theme="dark"] .prefix-header {
+    background-color: var(--bg-secondary);
+    border-color: var(--border-color);
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] .prefix-header:hover {
+    background-color: var(--bg-tertiary);
+    border-color: var(--accent-color);
+}
+
+[data-theme="dark"] .prefix-options {
+    background-color: var(--bg-secondary);
+    border-color: var(--border-color);
+}
+
+[data-theme="dark"] .prefix-option {
+    border-color: var(--border-color);
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] .prefix-option:hover {
+    background-color: var(--bg-tertiary);
+}
+
+[data-theme="dark"] .prefix-code {
+    background-color: var(--bg-tertiary);
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] .prefix-name {
+    color: var(--text-secondary);
+}
+
+/* Dark theme specifieke aanpassingen */
+[data-theme="dark"] .prefix-code {
+    background-color: var(--bg-tertiary);
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] .prefix-name {
+    color: var(--text-secondary);
+}
+
+/* Responsive aanpassingen */
+@media (max-width: 768px) {
+    .multiselect-option label {
+        padding: 0.6rem 0.8rem;
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .prefix-name {
+        margin-left: 0;
+        margin-top: 0.25rem;
+        font-size: 0.85rem;
+    }
+    
+    .prefix-code {
+        margin-right: 0;
+        margin-bottom: 0.25rem;
+    }
+}

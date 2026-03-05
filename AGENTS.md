@@ -23,6 +23,24 @@ This file captures the local rules and patterns for this template. Keep changes 
   - Keep `client/src/styles/pages.css` as import hub only.
 - For any new feature, create/extend focused files instead of appending large sections to existing monolith files.
 
+## CSS governance (semantic split)
+- Do not split CSS by raw line numbers; split by meaning/concern.
+- For large style domains, use an import hub + folder model:
+  - Hub file: `client/src/styles/<domain>.css` contains only ordered `@import` rules.
+  - Detail files: `client/src/styles/<domain>/*.css` grouped by concern (example: `sidebar-menu.css`, `sidebar-footer.css`).
+- CSS size policy:
+  - Preferred: <= 300 lines per semantic CSS file.
+  - Mandatory split: > 500 lines.
+  - Blocker threshold: > 700 lines.
+- Keep import order intentional:
+  - Consider hub import order functional and stable.
+  - Add new CSS files in the correct cascade order; do not reorder unrelated imports.
+- Feature-specific placement rules:
+  - Sidebar changes go in `client/src/styles/sidebar/*`.
+  - Client table changes go in `client/src/styles/client-table/*`.
+  - Theme override changes go in `client/src/styles/theme-override/*`.
+  - Do not re-introduce large monolithic CSS files for these domains.
+
 ## Composition model (vibecoding-safe)
 - Keep entry files thin:
   - `server/src/index.js` and `client/src/App.jsx` are orchestration only.

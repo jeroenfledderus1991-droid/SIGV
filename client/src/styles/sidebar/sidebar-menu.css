@@ -1,0 +1,83 @@
+﻿/* ===== MENU ===== */
+.sidebar-menu {
+  flex: 1;
+  padding: 10px 0 0 0;
+}
+.menu-list { list-style: none; padding: 0; margin: 0; }
+.menu-item { margin: 3px 0; padding: 0; }
+
+/* Icon + text on a strict rail (left flush) */
+.menu-link {
+  display: grid;
+  grid-template-columns: 22px 1fr; /* icon rail + text */
+  column-gap: 12px;
+  align-items: center;
+  padding: 10px 10px;
+  min-height: 40px;                /* same rhythm as account buttons */
+  color: var(--sidebar-text-muted) !important;
+  text-decoration: none;
+  border-radius: 10px;
+  transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+  position: relative;
+  font-size: 13px;
+  font-family: inherit;
+  font-weight: 400;
+  justify-content: start;
+  cursor: pointer; /* Zorgt voor handje */
+}
+.menu-link:hover {
+  background:
+    linear-gradient(
+      0deg,
+      color-mix(in srgb, currentColor 14%, transparent),
+      color-mix(in srgb, currentColor 14%, transparent)
+    ),
+    var(--sidebar-hover) !important;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, currentColor 24%, transparent);
+  color: var(--sidebar-text) !important;
+}
+.menu-link.active {
+  background: var(--sidebar-active) !important;
+  color: var(--sidebar-text) !important;
+  box-shadow: var(--shadow-sm);
+  font-weight: 600;
+}
+/* Active accent bar follows current color */
+.menu-link.active::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 8px;
+  bottom: 8px;
+  width: 3px;
+  border-radius: 3px;
+  background: currentColor;
+}
+.menu-link i {
+  font-size: 17px;
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  color: inherit !important;
+}
+.menu-text {
+  font-weight: 400;
+  font-size: 13px;
+  color: inherit !important;
+  font-family: inherit;
+  text-align: left;
+}
+
+/* Collapsed: icon-only pills, centered, full width click area */
+.sidebar.collapsed .menu-item { padding: 0; }
+.sidebar.collapsed .menu-link {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 10px 0;
+  width: 100%;
+  border-radius: 12px;
+}
+.sidebar.collapsed .menu-link i { margin: 0; }
+

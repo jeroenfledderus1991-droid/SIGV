@@ -1,0 +1,131 @@
+﻿/* ========================================
+   TABLE FOOTER & PAGINATION
+   ======================================== */
+
+.table-footer {
+    padding: 12px 20px;
+    border-top: 1px solid var(--border-color);
+    background: var(--bg-tertiary);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+}
+
+.table-info {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+}
+
+.table-pagination {
+    /* Deprecated - gebruik table-footer */
+    padding: 16px 20px;
+    border-top: 1px solid var(--border-color);
+    background: var(--bg-tertiary);
+}
+
+.pagination-controls {
+    display: flex;
+    justify-content: flex-end;
+    gap: 6px;
+    align-items: center;
+}
+
+.pagination-btn {
+    padding: 6px 12px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-primary);
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--text-primary);
+    transition: all 0.2s ease;
+    min-width: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.pagination-btn:hover:not(.disabled) {
+    border-color: var(--accent-color);
+    background: rgba(var(--accent-color-rgb), 0.1);
+    color: var(--accent-color);
+}
+
+.pagination-btn.active {
+    background: var(--accent-color);
+    color: var(--accent-text-color);
+    border-color: var(--accent-color);
+}
+
+.pagination-btn.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+.pagination-ellipsis {
+    padding: 0 8px;
+    color: var(--text-muted);
+    font-size: 0.875rem;
+}
+
+/* ========================================
+   RESPONSIVE DESIGN
+   ======================================== */
+
+@media (max-width: 768px) {
+    .table-header {
+        flex-direction: column;
+        gap: 12px;
+        align-items: flex-start;
+    }
+
+    .table-controls {
+        width: 100%;
+        flex-wrap: wrap;
+    }
+
+    .table-search input {
+        width: 100%;
+    }
+
+    .standard-table {
+        font-size: 0.8rem;
+    }
+
+    .standard-table th,
+    .standard-table td {
+        padding: 10px 12px;
+    }
+
+    .pagination-controls {
+        flex-wrap: wrap;
+    }
+}
+
+@media (max-width: 1200px) {
+    .table-responsive {
+        --table-zoom: 0.95;
+    }
+}
+
+@media (max-width: 1100px) {
+    .table-responsive {
+        --table-zoom: 0.9;
+    }
+}
+
+@media (max-width: 1000px) {
+    .table-responsive {
+        --table-zoom: 0.85;
+    }
+}
+
+@media (max-width: 900px) {
+    .standard-table {
+        min-width: var(--table-min-scroll-width);
+    }
+}
+

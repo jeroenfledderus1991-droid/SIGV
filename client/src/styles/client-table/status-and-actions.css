@@ -1,0 +1,127 @@
+﻿/* ========================================
+   STATUS BADGES
+   ======================================== */
+
+.status-badge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: capitalize;
+    letter-spacing: 0.025em;
+    line-height: 1.4;
+    vertical-align: middle;
+}
+
+/* Alle statussen gebruiken accent kleur */
+.status-actief,
+.status-active,
+.status-inactief,
+.status-inactive,
+.status-pending,
+.status-wachtend,
+.status-completed,
+.status-voltooid {
+    background: rgba(var(--accent-color-rgb), 0.15);
+    color: var(--accent-color);
+}
+
+/* ========================================
+   ACTION BUTTONS
+   ======================================== */
+
+.table-actions {
+    display: flex;
+    gap: 4px;
+    justify-content: center;
+    align-items: center;
+    white-space: nowrap;
+    flex-wrap: nowrap;
+}
+
+.table-action-btn {
+    padding: 5px 8px;
+    border: 1px solid var(--border-color);
+    background: #ffffff;
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 0.8125rem;
+    color: var(--accent-color);
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+/* Icons binnen buttons krijgen accent kleur */
+.table-action-btn i,
+.table-action-btn svg {
+    color: var(--accent-color);
+    fill: var(--accent-color);
+}
+
+.table-action-btn.icon-only {
+    padding: 5px;
+    min-width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+}
+
+.table-action-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-sm);
+    border-color: var(--accent-color);
+    background: #ffffff;
+}
+
+.table-action-btn:hover i,
+.table-action-btn:hover svg {
+    color: var(--accent-color);
+    fill: var(--accent-color);
+}
+
+/* Alle action types gebruiken accent kleur voor icon */
+.table-action-btn.edit,
+.table-action-btn.delete,
+.table-action-btn.view,
+.table-action-btn.download {
+    color: var(--accent-color);
+    background: #ffffff;
+}
+
+.table-action-btn.edit i,
+.table-action-btn.delete i,
+.table-action-btn.view i,
+.table-action-btn.download i,
+.table-action-btn.edit svg,
+.table-action-btn.delete svg,
+.table-action-btn.view svg,
+.table-action-btn.download svg {
+    color: var(--accent-color);
+    fill: var(--accent-color);
+}
+
+.table-action-btn.edit:hover,
+.table-action-btn.delete:hover,
+.table-action-btn.view:hover,
+.table-action-btn.download:hover {
+    border-color: var(--accent-color);
+    background: #ffffff;
+    color: var(--accent-color);
+}
+
+.table-action-btn.edit:hover i,
+.table-action-btn.delete:hover i,
+.table-action-btn.view:hover i,
+.table-action-btn.download:hover i,
+.table-action-btn.edit:hover svg,
+.table-action-btn.delete:hover svg,
+.table-action-btn.view:hover svg,
+.table-action-btn.download:hover svg {
+    color: var(--accent-color);
+    fill: var(--accent-color);
+}
+

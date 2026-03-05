@@ -1,0 +1,173 @@
+﻿/* ===== FOOTER (ACCOUNT BLOCK) ===== */
+.sidebar-footer {
+  padding: 10px 8px 12px;
+  border-top: 1px solid var(--sidebar-hover);
+  display: grid;
+  gap: 6px; /* Compact, avatar close to logout */
+}
+
+/* User Profile Container with Dropdown */
+.user-profile-container {
+  position: relative;
+}
+
+/* User info: same rail + clear text hierarchy */
+.sidebar .user-info {
+  display: grid;
+  grid-template-columns: 22px 1fr;
+  column-gap: 10px;
+  align-items: center;
+  padding: 8px 10px;
+  min-height: 40px;
+  border-radius: 10px;
+  color: var(--sidebar-text-muted) !important;
+  text-decoration: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 13px;
+  transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+  width: 100%;
+  text-align: left;
+}
+
+.sidebar .user-details {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.sidebar .user-info:hover,
+.sidebar .user-info:focus {
+  background:
+    linear-gradient(
+      0deg,
+      color-mix(in srgb, currentColor 14%, transparent),
+      color-mix(in srgb, currentColor 14%, transparent)
+    ),
+    var(--sidebar-hover) !important;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, currentColor 24%, transparent);
+  color: var(--sidebar-text) !important;
+}
+.sidebar .user-info .fa-user-circle {
+  font-size: 1.5em;
+  color: inherit !important;
+}
+
+/* Profile Dropdown Menu */
+.profile-dropdown {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 8px;
+  right: 8px;
+  background: var(--sidebar-surface, var(--sidebar-bg, #fff));
+  border: 1px solid var(--sidebar-hover);
+  border-radius: 10px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  z-index: 1100;
+  overflow: hidden;
+  animation: dropdownFadeIn 0.2s ease;
+}
+
+@keyframes dropdownFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.profile-dropdown-item {
+  display: grid;
+  grid-template-columns: 22px 1fr;
+  column-gap: 10px;
+  align-items: center;
+  padding: 10px 12px;
+  color: var(--sidebar-text-muted) !important;
+  text-decoration: none;
+  transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+  cursor: pointer;
+  border: none;
+  background: none;
+  width: 100%;
+  text-align: left;
+  font-size: 13px;
+}
+
+.profile-dropdown-item:hover {
+  background:
+    linear-gradient(
+      0deg,
+      color-mix(in srgb, currentColor 14%, transparent),
+      color-mix(in srgb, currentColor 14%, transparent)
+    ),
+    var(--sidebar-hover) !important;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, currentColor 24%, transparent);
+  color: var(--sidebar-text) !important;
+}
+
+.profile-dropdown-item i {
+  font-size: 16px;
+  color: inherit !important;
+}
+
+.profile-dropdown-item span {
+  color: inherit !important;
+  font-weight: 400;
+}
+
+.profile-dropdown-item.logout-item {
+  border-top: 1px solid var(--sidebar-hover);
+}
+
+/* Collapsed state dropdown positioning â€“ uses position:fixed via JS */
+.sidebar.collapsed .profile-dropdown {
+  right: auto;
+  min-width: 180px;
+}
+
+/* Hide user-details in collapsed state */
+.sidebar.collapsed .user-details {
+  display: none;
+}
+
+.sidebar .user-name {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--sidebar-text, #111) !important;
+}
+.sidebar .user-role {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-top: 2px;
+  font-size: 12px;
+  line-height: 1.2;
+  color: var(--sidebar-role, #bfc8d2) !important; /* licht inactief blauwgrijs, overridebaar met var */
+  font-weight: 500;
+}
+
+/* Collapsed footer: icon pills, match menu */
+.sidebar.collapsed .sidebar-footer {
+  padding: 10px 0 12px;
+  justify-items: center;
+  gap: 6px;
+}
+.sidebar.collapsed .user-info {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 52px;               /* match menu pill width */
+  padding: 10px 0;
+  border-radius: 12px;
+}
+.sidebar.collapsed .user-name,
+.sidebar.collapsed .user-role { display: none !important; }
+

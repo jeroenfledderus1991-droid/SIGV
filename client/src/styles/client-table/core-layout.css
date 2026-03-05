@@ -1,0 +1,260 @@
+﻿/**
+ * CLIENT-SIDE TABLE COMPONENT - STYLING
+ * Versie: 2.0.0 - Thema geÃ¯ntegreerd
+ * 
+ * Deze CSS bevat alle styling voor de client-side table component
+ * Volledig geÃ¯ntegreerd met thema systeem via CSS variabelen
+ * Gebruikt ALLEEN dynamische theme kleuren - geen hardcoded fallbacks
+ */
+
+/* ========================================
+   TABLE CONTAINER
+   ======================================== */
+
+.table-container {
+    background: var(--bg-secondary);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+    margin: 20px 0;
+    transition: box-shadow 0.3s ease;
+    border: 1px solid var(--border-color);
+}
+
+/* Fix voor hover-jump probleem */
+.table-container:hover {
+    transform: none !important;
+    box-shadow: var(--shadow-md) !important;
+}
+
+/* ========================================
+   TABLE HEADER
+   ======================================== */
+
+.table-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border-color);
+    background: var(--bg-tertiary);
+}
+
+.table-title {
+    margin: 0;
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.table-controls {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+/* ========================================
+   SEARCH BOX
+   ======================================== */
+
+.table-search {
+    position: relative;
+}
+
+.table-search input {
+    padding: 8px 12px 8px 36px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    font-size: 0.875rem;
+    width: 220px;
+    transition: all 0.2s ease;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+}
+
+.table-search input:focus {
+    outline: none;
+    border-color: var(--accent-color);
+    box-shadow: 0 0 0 3px rgba(var(--accent-color-rgb), 0.15);
+}
+
+.table-search input::placeholder {
+    color: var(--text-muted);
+}
+
+.table-search .search-icon {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-muted);
+    font-size: 0.875rem;
+    pointer-events: none;
+}
+
+/* ========================================
+   CUSTOM DROPDOWN (Rows Selector)
+   ======================================== */
+
+.table-rows-selector {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.table-rows-selector label {
+    margin: 0;
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.custom-select-wrapper {
+    position: relative;
+    width: 80px;
+}
+
+.custom-select {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-primary);
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    font-size: 0.875rem;
+    transition: all 0.2s ease;
+    user-select: none;
+}
+
+.custom-select:hover {
+    border-color: var(--accent-color);
+    background: var(--bg-tertiary);
+}
+
+.custom-select .selected-value {
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+.custom-select i {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    transition: transform 0.2s ease;
+}
+
+.custom-select:hover i {
+    color: var(--accent-color);
+}
+
+.custom-select-options {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-lg);
+    z-index: 1000;
+    max-height: 250px;
+    overflow-y: auto;
+}
+
+.custom-option {
+    padding: 8px 12px;
+    cursor: pointer;
+    font-size: 0.875rem;
+    transition: all 0.15s ease;
+    color: var(--text-primary);
+}
+
+.custom-option:hover {
+    background: var(--bg-tertiary);
+    color: var(--accent-color);
+}
+
+.custom-option.active {
+    background: var(--accent-color);
+    color: var(--accent-text-color);
+    font-weight: 500;
+}
+
+/* ========================================
+   EXPORT BUTTON (optioneel)
+   ======================================== */
+
+.table-export {
+    position: relative;
+}
+
+.export-dropdown-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    border: 1px solid var(--border-color);
+    background: var(--accent-color);
+    color: var(--accent-text-color);
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.export-dropdown-btn i,
+.export-dropdown-btn svg,
+.export-dropdown-btn .export-text,
+.export-dropdown-btn span {
+    color: var(--accent-text-color) !important;
+    fill: var(--accent-text-color);
+}
+
+.export-dropdown-btn:hover {
+    border-color: var(--accent-color);
+    background: var(--accent-hover);
+    color: var(--accent-text-color);
+}
+
+.export-dropdown-btn:hover i,
+.export-dropdown-btn:hover svg,
+.export-dropdown-btn:hover .export-text,
+.export-dropdown-btn:hover span {
+    color: var(--accent-text-color) !important;
+    fill: var(--accent-text-color);
+}
+
+.export-menu {
+    position: absolute;
+    top: calc(100% + 4px);
+    right: 0;
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-lg);
+    z-index: 1000;
+    min-width: 150px;
+}
+
+.export-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 8px 14px;
+    border: none;
+    background: none;
+    cursor: pointer;
+    font-size: 0.875rem;
+    color: var(--text-primary);
+    text-align: left;
+    transition: all 0.15s ease;
+}
+
+.export-option:hover {
+    background: var(--bg-tertiary);
+    color: var(--accent-color);
+}
+

@@ -1,0 +1,70 @@
+﻿/* ==========================================================================
+   Sidebar â€“ modernized layout, no color scheme changes
+   Uses your existing CSS variables (e.g. --sidebar-bg, --sidebar-text, etc.)
+   Optional: role color via --sidebar-role (falls back to --sidebar-text-muted)
+   ========================================================================== */
+
+/* ===== SIDEBAR BASE ===== */
+.sidebar {
+  width: 210px;
+  background: var(--sidebar-bg);
+  --sidebar-header-bg: transparent;
+  --sidebar-header-ink: var(--sidebar-text);
+  --sidebar-header-border: var(--sidebar-hover);
+  --sidebar-header-hover: var(--sidebar-hover);
+  color: var(--sidebar-text);
+  position: fixed;
+  inset: 0 auto 0 0;
+  height: 100vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  transition: width 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 1000;
+  box-shadow: var(--shadow-md);
+  display: flex;
+  flex-direction: column;
+  font-family: 'Inter','Segoe UI',Arial,sans-serif;
+  font-size: clamp(12px, 0.85vw, 13px);
+  letter-spacing: 0.01em;
+  scrollbar-width: thin;
+  scrollbar-color: var(--sidebar-hover) transparent;
+  will-change: width;
+}
+.sidebar::-webkit-scrollbar { width: 8px; }
+.sidebar::-webkit-scrollbar-thumb { background: var(--sidebar-hover); border-radius: 8px; }
+
+/* ===== COLLAPSED STATE ===== */
+.sidebar.collapsed {
+  width: 70px;
+  overflow: hidden;
+}
+
+/* Text hiding strategy: avoid layout thrash & flicker */
+.sidebar.text-hidden .menu-text,
+.sidebar.text-hidden .logo h3,
+.sidebar.text-hidden .user-name,
+.sidebar.text-hidden .user-role,
+.sidebar.text-hidden .logout-text,
+.sidebar.text-hidden .version-info,
+.sidebar.collapsed .menu-text,
+.sidebar.collapsed .logo h3,
+.sidebar.collapsed .user-name,
+.sidebar.collapsed .user-role,
+.sidebar.collapsed .logout-text,
+.sidebar.collapsed .version-info {
+  visibility: hidden;
+  opacity: 0;
+  transition: opacity .12s linear;
+  pointer-events: none;
+  width: 0; /* preserve structure for smooth width animation */
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+/* Keep logo image present (prevents reflow flash) */
+.sidebar.collapsed .logo-img { display:block; }
+.sidebar.collapsed .logo { margin:0 auto; }
+
+/* Prevent sudden removal of header height */
+.sidebar.collapsed .sidebar-header { min-height:56px; }
+

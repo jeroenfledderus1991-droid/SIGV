@@ -1,0 +1,199 @@
+﻿/* Donkergroene navigatiebalk in alle thema's */
+[data-theme="dark"] .sidebar,
+[data-theme="dark"] .top-header,
+[data-theme="auto"] .sidebar,
+[data-theme="auto"] .top-header,
+.theme-dark .sidebar,
+.theme-dark .top-header {
+    background: #16281d !important;
+    color: #f8fafc !important;
+    border-bottom: 1px solid #2d2d2d !important;
+}
+@media (prefers-color-scheme: dark) {
+    [data-theme="auto"] .standard-table,
+    [data-theme="auto"] .compact-table {
+        background-color: #232a34 !important;
+        color: #f8fafc !important;
+        border-color: #353b45 !important;
+    }
+    [data-theme="auto"] .standard-table th,
+    [data-theme="auto"] .compact-table th {
+        background: linear-gradient(135deg, #2d323c 80%, #232a34 100%) !important;
+        color: #e0e6ef !important;
+        border-bottom: 1.5px solid #353b45 !important;
+        font-weight: 600;
+    }
+    [data-theme="auto"] .standard-table td,
+    [data-theme="auto"] .compact-table td {
+        color: #f8fafc !important;
+        background-color: #232a34 !important;
+        border-color: #353b45 !important;
+    }
+    [data-theme="auto"] .standard-table tbody tr:hover,
+    [data-theme="auto"] .compact-table tbody tr:hover {
+        background-color: #313846 !important;
+        color: #fff !important;
+    }
+    [data-theme="auto"] .standard-table tbody tr,
+    [data-theme="auto"] .compact-table tbody tr {
+        background-color: #232a34 !important;
+    }
+    [data-theme="auto"] .standard-table tbody td,
+    [data-theme="auto"] .compact-table tbody td {
+        color: #f8fafc !important;
+        background-color: #232a34 !important;
+    }
+}
+[data-theme="dark"] .standard-table tbody tr,
+[data-theme="dark"] .compact-table tbody tr,
+.theme-dark .standard-table tbody tr,
+.theme-dark .compact-table tbody tr {
+    background-color: #232a34 !important;
+}
+[data-theme="dark"] .standard-table tbody td,
+[data-theme="dark"] .compact-table tbody td,
+.theme-dark .standard-table tbody td,
+.theme-dark .compact-table tbody td {
+    color: #f8fafc !important;
+    background-color: #232a34 !important;
+}
+/* ===== TABLE DARK THEME HERSTEL ===== */
+[data-theme="dark"] .standard-table,
+[data-theme="dark"] .compact-table,
+.theme-dark .standard-table,
+.theme-dark .compact-table {
+    background-color: #232a34 !important;
+    color: #f8fafc !important;
+    border-color: #353b45 !important;
+}
+[data-theme="dark"] .standard-table th,
+[data-theme="dark"] .compact-table th,
+.theme-dark .standard-table th,
+.theme-dark .compact-table th {
+    background: linear-gradient(135deg, #2d323c 80%, #232a34 100%) !important;
+    color: #e0e6ef !important;
+    border-bottom: 1.5px solid #353b45 !important;
+    font-weight: 600;
+}
+[data-theme="dark"] .standard-table td,
+[data-theme="dark"] .compact-table td,
+.theme-dark .standard-table td,
+.theme-dark .compact-table td {
+    color: #f8fafc !important;
+    border-color: #353b45 !important;
+}
+[data-theme="dark"] .standard-table tbody tr:hover,
+[data-theme="dark"] .compact-table tbody tr:hover,
+.theme-dark .standard-table tbody tr:hover,
+.theme-dark .compact-table tbody tr:hover {
+    background-color: #313846 !important;
+    color: #fff !important;
+}
+/* ===== TABLE DARK THEME ===== */
+[data-theme="dark"] .table,
+.theme-dark .table {
+    background-color: #232a34 !important;
+    color: #f8fafc !important;
+    border-color: #353b45 !important;
+}
+[data-theme="dark"] .table-striped tbody tr:nth-of-type(odd),
+.theme-dark .table-striped tbody tr:nth-of-type(odd) {
+    background-color: #262b33 !important;
+}
+[data-theme="dark"] .table th,
+[data-theme="dark"] .table thead th,
+.theme-dark .table th,
+.theme-dark .table thead th {
+    background: linear-gradient(135deg, #2d323c 80%, #232a34 100%) !important;
+    color: #e0e6ef !important;
+    border-bottom: 1.5px solid #353b45 !important;
+    font-weight: 600;
+}
+[data-theme="dark"] .table td,
+.theme-dark .table td {
+    color: #f8fafc !important;
+    border-color: #353b45 !important;
+}
+[data-theme="dark"] .table tbody tr:hover,
+.theme-dark .table tbody tr:hover {
+    background-color: #313846 !important;
+    color: #fff !important;
+}
+[data-theme="dark"] .table .btn,
+.theme-dark .table .btn {
+    background-color: #2d323c !important;
+    color: #e0e6ef !important;
+    border-color: #3a4150 !important;
+}
+[data-theme="dark"] .table .btn:hover,
+.theme-dark .table .btn:hover {
+    background-color: #374151 !important;
+    color: #fff !important;
+    border-color: #4b5563 !important;
+}
+.modal .form-select {
+    min-height: 44px !important;
+    padding-top: 10px !important;
+    padding-bottom: 10px !important;
+    font-size: 16px !important;
+    line-height: 1.4 !important;
+}
+/* ===== MODERNE BUTTONS ===== */
+.btn-info {
+    background: #e3f0fa !important;
+    color: #1976d2 !important;
+    border: none !important;
+    border-radius: 8px !important;
+    box-shadow: none !important;
+    font-weight: 500;
+}
+.btn-info:hover, .btn-info:focus {
+    background: #cbe3f7 !important;
+    color: #125ea7 !important;
+}
+
+.btn-success {
+    background: #e6f7ec !important;
+    color: #219150 !important;
+    border: none !important;
+    border-radius: 8px !important;
+    box-shadow: none !important;
+    font-weight: 500;
+}
+.btn-success:hover, .btn-success:focus {
+    background: #c7eed8 !important;
+    color: #176c3a !important;
+}
+
+.btn-secondary {
+    background: #f3f4f6 !important;
+    color: #5a5a5a !important;
+    border: none !important;
+    border-radius: 8px !important;
+    box-shadow: none !important;
+    font-weight: 500;
+}
+.btn-secondary:hover, .btn-secondary:focus {
+    background: #e0e1e3 !important;
+    color: #333 !important;
+}
+
+.btn-warning {
+    background: #fff7e0 !important;
+    color: #b8860b !important;
+    border: none !important;
+    border-radius: 8px !important;
+    box-shadow: none !important;
+    font-weight: 500;
+}
+.btn-warning:hover, .btn-warning:focus {
+    background: #ffe9b3 !important;
+    color: #a0760a !important;
+}
+
+.btn {
+    padding: 0.45rem 1.1rem !important;
+    font-size: 1rem !important;
+    letter-spacing: 0.01em;
+    transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+}

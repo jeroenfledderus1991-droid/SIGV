@@ -1,0 +1,334 @@
+﻿/* ===== COMPLETE THEMA OVERRIDE ===== */
+/* Zorgt ervoor dat ALLE elementen het thema gebruiken */
+
+/* ===== BODY EN HTML OVERRIDE ===== */
+html {
+    background-color: var(--bg-primary) !important;
+    color-scheme: light dark;
+}
+
+body {
+    background-color: var(--bg-primary) !important;
+    color: var(--text-primary) !important;
+}
+
+/* Dark theme specifieke body styling */
+[data-theme="dark"] body,
+.theme-dark body {
+    color-scheme: dark;
+}
+
+/* ===== SIDEBAR SPECIFIEKE FIXES ===== */
+.sidebar .menu-link {
+    color: var(--sidebar-text-muted) !important;
+}
+
+.sidebar .menu-link:hover {
+    color: var(--sidebar-text) !important;
+    background:
+        linear-gradient(0deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.18)),
+        var(--sidebar-hover) !important;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.28);
+}
+
+.sidebar .menu-link.active:hover {
+    background:
+        linear-gradient(0deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.18)),
+        var(--sidebar-active) !important;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.3);
+}
+
+.sidebar .menu-link.active {
+    color: var(--sidebar-text) !important;
+    background: var(--sidebar-active) !important;
+}
+
+.sidebar .menu-text {
+    color: inherit !important;
+}
+
+.sidebar .user-info {
+    color: var(--sidebar-text-muted) !important;
+}
+
+.sidebar .user-info:hover {
+    color: var(--sidebar-text) !important;
+    background:
+        linear-gradient(0deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.18)),
+        var(--sidebar-hover) !important;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.28);
+}
+
+.sidebar .logout-btn {
+    color: var(--sidebar-text-muted) !important;
+}
+
+/* ===== USER AVATAR EN NAAM SPECIFIEKE FIXES ===== */
+/* .user-role kleur nu in sidebar.css, niet meer overriden hier */
+
+/* User name behoudt originele kleur (sidebar.css regelt dit al) */
+
+/* Avatar cirkel tekst moet altijd wit zijn */
+.sidebar .user-avatar {
+    color: white !important;
+}
+
+/* Voor alle thema's - zorg dat avatar tekst wit blijft */
+[data-theme="light"] .sidebar .user-avatar,
+[data-theme="dark"] .sidebar .user-avatar {
+    color: white !important;
+}
+
+.sidebar .logout-btn:hover {
+    color: var(--sidebar-text) !important;
+}
+
+.sidebar .logo h3 {
+    color: var(--sidebar-header-ink, var(--sidebar-text)) !important;
+}
+
+.sidebar .sidebar-toggle {
+    color: var(--sidebar-header-ink, var(--sidebar-text)) !important;
+}
+
+.sidebar .menu-link i {
+    color: inherit !important;
+}
+
+.sidebar .user-info i {
+    color: inherit !important;
+}
+
+.sidebar .logout-btn i {
+    color: inherit !important;
+}
+
+/* ===== ALLE TEKST ELEMENTEN ===== */
+p, span, div, label, small {
+    color: var(--text-primary);
+}
+
+strong, b {
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+/* ===== ALLE INPUT ELEMENTEN ===== */
+input, textarea, select {
+    background-color: var(--bg-secondary) !important;
+    border-color: var(--border-color) !important;
+    color: var(--text-primary) !important;
+}
+
+input:focus, textarea:focus, select:focus {
+    background-color: var(--bg-secondary) !important;
+    border-color: var(--accent-color) !important;
+    color: var(--text-primary) !important;
+}
+
+input::placeholder, textarea::placeholder {
+    color: var(--text-muted) !important;
+}
+
+/* ===== ALLE BACKGROUND ELEMENTEN ===== */
+.bg-white, .bg-light {
+    background-color: var(--bg-secondary) !important;
+}
+
+.bg-dark {
+    background-color: var(--bg-tertiary) !important;
+}
+
+.bg-primary {
+    background-color: var(--accent-color) !important;
+}
+
+/* ===== TEXT COLOR OVERRIDES ===== */
+.text-dark {
+    color: var(--text-primary) !important;
+}
+
+.text-light {
+    color: var(--text-secondary) !important;
+}
+
+.text-white {
+    color: var(--sidebar-text) !important;
+}
+
+.text-primary {
+    color: var(--accent-color) !important;
+}
+
+/* ===== BORDER OVERRIDES ===== */
+.border {
+    border-color: var(--border-color) !important;
+}
+
+.border-light {
+    border-color: var(--border-color-light) !important;
+}
+
+.border-primary {
+    border-color: var(--accent-color) !important;
+}
+
+/* ===== DROPDOWN SPECIFIEKE FIXES ===== */
+.dropdown-menu {
+    background-color: var(--bg-secondary) !important;
+    border-color: var(--border-color) !important;
+}
+
+.dropdown-item {
+    color: var(--text-primary) !important;
+}
+
+.dropdown-item:hover, .dropdown-item:focus {
+    background-color: var(--bg-tertiary) !important;
+    color: var(--accent-color) !important;
+}
+
+/* ===== TABLE SPECIFIEKE FIXES ===== */
+.table {
+    background-color: var(--bg-secondary) !important;
+    color: var(--text-primary) !important;
+}
+
+.table th {
+    background-color: var(--bg-tertiary) !important;
+    border-color: var(--border-color) !important;
+    color: var(--accent-color) !important;
+}
+
+.table td {
+    border-color: var(--border-color-light) !important;
+    background-color: var(--bg-secondary) !important;
+}
+
+.table-striped tbody tr:nth-of-type(odd) td {
+    background-color: var(--bg-tertiary) !important;
+}
+
+/* ===== CARD SPECIFIEKE FIXES ===== */
+.card {
+    background-color: var(--bg-secondary) !important;
+    border-color: var(--border-color) !important;
+}
+
+.card-header {
+    background-color: var(--bg-tertiary) !important;
+    border-color: var(--border-color) !important;
+    color: var(--text-primary) !important;
+}
+
+.card-body {
+    background-color: var(--bg-secondary) !important;
+    color: var(--text-primary) !important;
+}
+
+.card-footer {
+    background-color: var(--bg-tertiary) !important;
+    border-color: var(--border-color) !important;
+    color: var(--text-secondary) !important;
+}
+
+/* ===== FORM SPECIFIEKE FIXES ===== */
+.form-control, .form-select {
+    background-color: var(--bg-secondary) !important;
+    border-color: var(--border-color) !important;
+    color: var(--text-primary) !important;
+    min-height: 38px;
+    padding: 0.575rem 0.75rem;
+    font-size: 0.95rem;
+}
+
+.form-control:focus, .form-select:focus {
+    background-color: var(--bg-secondary) !important;
+    border-color: var(--accent-color) !important;
+    color: var(--text-primary) !important;
+    box-shadow: 0 0 0 0.25rem color-mix(in srgb, var(--accent-color) 25%, transparent) !important;
+}
+
+/* Verbeterde select dropdown styling */
+select.form-control {
+    background-image: url("data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='none' stroke='%23666' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2 5l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    background-size: 16px 12px;
+    padding-right: 2.5rem;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+}
+
+/* Option styling voor betere leesbaarheid */
+select.form-control option {
+    color: var(--text-primary);
+    background-color: var(--bg-secondary);
+    padding: 0.5rem 0.75rem;
+}
+
+/* Dark theme select arrow */
+[data-theme="dark"] select.form-control {
+    background-image: url("data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='none' stroke='%23ccc' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2 5l6 6 6-6'/%3E%3C/svg%3E");
+}
+
+/* ===== MODAL SELECT/VISIBILITY FIX ===== */
+/* Zorg dat tekst in rol select altijd zichtbaar is (weghalen hard wit uit eerdere override) */
+.modal .form-select {
+    background-color: var(--bg-secondary) !important; /* i.p.v. hard #ffffff */
+    color: var(--text-primary) !important;
+}
+.modal .form-select option {
+    color: var(--text-primary) !important; /* fallback voor browsers die option kleur ondersteunen */
+    background-color: var(--bg-secondary) !important;
+}
+/* Dark theme nuance: iets donkerdere achtergrond zodat contrast behouden blijft */
+[data-theme="dark"] .modal .form-select {
+    background-color: var(--bg-tertiary) !important;
+}
+
+.form-label {
+    color: var(--text-primary) !important;
+}
+
+/* ===== BUTTON SPECIFIEKE FIXES ===== */
+.btn {
+    border-radius: var(--border-radius) !important;
+    font-size: var(--font-size-base) !important;
+}
+
+.btn-primary {
+    background-color: var(--accent-color) !important;
+    border-color: var(--accent-color) !important;
+    color: #ffffff !important;
+    font-weight: 600 !important;
+}
+
+.btn-primary:hover {
+    background-color: var(--accent-hover) !important;
+    border-color: var(--accent-hover) !important;
+    color: #ffffff !important;
+}
+
+.btn-secondary {
+    background-color: var(--bg-tertiary) !important;
+    border-color: var(--border-color) !important;
+    color: var(--text-primary) !important;
+}
+
+.btn-secondary:hover {
+    background-color: var(--border-color) !important;
+    color: var(--text-primary) !important;
+}
+
+/* ===== NAVBAR FIXES ===== */
+.navbar {
+    background-color: var(--bg-secondary) !important;
+    border-color: var(--border-color) !important;
+}
+
+.navbar-brand, .navbar-nav .nav-link {
+    color: var(--text-primary) !important;
+}
+
