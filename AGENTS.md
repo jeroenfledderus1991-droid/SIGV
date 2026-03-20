@@ -2,6 +2,21 @@
 
 This file captures the local rules and patterns for this template. Keep changes consistent with the existing structure.
 
+## Rollenhandboek — verplichte eerste stap
+
+> **Lees `AGENTS_ROLLEN.md` vóórdat je iets uitvoert.**
+> Rollen worden standaard automatisch geactiveerd op basis van taaktype (zie `AGENTS_ROLLEN.md`). Als een prompt expliciet een rol/rolvolgorde noemt, dan geldt die expliciete instructie.
+>
+> Standaard workflow:
+> 1. Gebruiker verwoordt zijn wens aan de **Prompt Engineer**.
+> 2. Optioneel kan de gebruiker direct de **Project manager** starten (`ROL: Project manager` + `Start`) voor end-to-end orkestratie.
+> 3. De Prompt Engineer schrijft anders een gestructureerde Codex-prompt met per-rol instructies.
+> 4. Bij plan-/scope-/architectuurvragen: **Product Owner** en **Architect** worden automatisch samen geactiveerd tot een bouwklaar plan.
+> 5. Elke betrokken rol voert daarna zijn eigen sectie uit.
+> 6. Besluiten over architectuur/scope/fasering kunnen standaard door **Project manager + Architect** worden genomen zonder aparte gebruikersakkoordstap, tenzij expliciet anders gevraagd.
+>
+> Beschikbare rollen: `Project manager` · `Prompt Engineer` · `Product Owner` · `Architect` · `Builder` · `Tester` · `Designer` · `Data-engineer` · `Cyber-security`
+
 ## Core principles
 - Read from database views (vw_*) and write to tables (tbl_*). Views isolate schema changes.
 - All authenticated API routes must go through `requireAuth` and, when applicable, `requirePermission`.
