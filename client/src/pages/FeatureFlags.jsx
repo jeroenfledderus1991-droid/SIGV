@@ -19,7 +19,7 @@ const CATEGORY_OPTIONS = [
 
 export default function FeatureFlags() {
   const [flags, setFlags] = useState([]);
-  const [activeTab, setActiveTab] = useState("ALL");
+  const [activeTab, setActiveTab] = useState(() => localStorage.getItem("featureFlagsTab") || "ALL");
 
   const loadFlags = () => {
     getJson("/feature-flags").then(setFlags).catch(() => setFlags([]));
@@ -27,11 +27,6 @@ export default function FeatureFlags() {
 
   useEffect(() => {
     loadFlags();
-  }, []);
-
-  useEffect(() => {
-    const stored = localStorage.getItem("featureFlagsTab");
-    if (stored) setActiveTab(stored);
   }, []);
 
   useEffect(() => {

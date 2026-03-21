@@ -98,7 +98,15 @@ export default function useThemeSettings(enabled = true) {
 
   useEffect(() => {
     let mounted = true;
-    const stored = bootstrapSettings ? null : getStoredSettings();
+    const initialBootstrapSettings = enabled ? normalizeSettings(getBootstrap().themeSettings) : null;
+    const stored = initialBootstrapSettings ? null : getStoredSettings();
+    const updateLocalState = (nextSettings, nextLoading) => {
+      Promise.resolve().then(() => {
+        if (!mounted) return;
+        if (nextSettings) setSettings(nextSettings);
+        if (typeof nextLoading === "boolean") setLoading(nextLoading);
+      });
+    };
     const fallbackFetch = () => {
       getJson("/user-settings")
         .then((data) => {
@@ -127,25 +135,21 @@ export default function useThemeSettings(enabled = true) {
     };
     if (!enabled) {
       applyThemeSettings(DEFAULT_SETTINGS);
-      setSettings(DEFAULT_SETTINGS);
-      setLoading(false);
       return () => {
         mounted = false;
       };
     }
 
-    if (bootstrapSettings) {
-      setSettings(bootstrapSettings);
-      applyThemeSettings(bootstrapSettings);
-      storeSettings(bootstrapSettings);
-      setLoading(false);
+    if (initialBootstrapSettings) {
+      applyThemeSettings(initialBootstrapSettings);
+      storeSettings(initialBootstrapSettings);
+      updateLocalState(initialBootstrapSettings, false);
     } else if (stored) {
-      setSettings(stored);
       applyThemeSettings(stored);
-      setLoading(false);
+      updateLocalState(stored, false);
     } else {
       applyThemeSettings(DEFAULT_SETTINGS);
-      setLoading(true);
+      updateLocalState(null, true);
     }
 
     loadBootstrap()
@@ -186,5 +190,10 @@ export default function useThemeSettings(enabled = true) {
     });
   }, []);
 
-  return { settings, updateSettings, loading, hasCache: Boolean(cachedSettings) };
+  return {
+    settings: enabled ? settings : DEFAULT_SETTINGS,
+    updateSettings,
+    loading: enabled ? loading : false,
+    hasCache: enabled ? Boolean(cachedSettings) : false,
+  };
 }

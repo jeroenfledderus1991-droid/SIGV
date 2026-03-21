@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import useThemeSettings from "../hooks/useThemeSettings";
 
 const DEFAULT_ACCENT = "#2c5f41";
@@ -23,18 +23,11 @@ function isValidHex(value) {
 }
 
 export function SettingsView({ settings, updateSettings }) {
-  const [accentInput, setAccentInput] = useState(settings.accentColor);
-
-  useEffect(() => {
-    setAccentInput(settings.accentColor);
-  }, [settings.accentColor]);
-
   const showGradientControls = settings.sidebarVariant === "accent-gradient";
   const gradientValue = useMemo(() => Number(settings.gradientIntensity || 0), [settings.gradientIntensity]);
 
   const handleAccentChange = (value) => {
     const normalized = normalizeHex(value.trim());
-    setAccentInput(normalized);
     if (isValidHex(normalized)) {
       updateSettings({ accentColor: normalized, accentTextColor: "#ffffff" });
     }
@@ -91,7 +84,8 @@ export function SettingsView({ settings, updateSettings }) {
                     <input
                       className="accent-hex-input"
                       type="text"
-                      value={accentInput}
+                      key={settings.accentColor}
+                      defaultValue={settings.accentColor}
                       maxLength={7}
                       onChange={(event) => handleAccentChange(event.target.value)}
                     />

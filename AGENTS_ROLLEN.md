@@ -78,6 +78,7 @@ Gebruiker → Prompt Engineer / Project manager → Product Owner ↔ Architect 
 - De gegenereerde prompt bevat altijd een sectie per betrokken rol (zie structuur hieronder).
 - Wees expliciet over scope: wat valt WEL en NIET in de opdracht.
 - Schrijf de prompt in het Nederlands tenzij technische termen Engels vereisen.
+- Als de opdracht een nieuwe `ClientTable` bevat: neem altijd eerst de verplichte settings-intake op (simpele taal + keuze-opties).
 
 **Output-structuur van een Codex-prompt:**
 
@@ -200,7 +201,24 @@ Resultaat van deze samenwerking:
 - Gebruik uitsluitend `getJson`, `postJson`, `putJson`, `deleteJson` uit `client/src/api.js`.
 - Voeg de route toe in `client/src/App.jsx` en registreer een `navItems`-entry met de juiste `permissions`.
 - Hergebruik `ClientTable` voor lijstpagina's.
+- Bij elke nieuwe `ClientTable` is een settings-intake verplicht voordat er gebouwd wordt.
+- Als settings ontbreken: eerst in simpele taal navragen met korte keuze-opties die direct in chat te beantwoorden zijn.
+- Zonder expliciete settings-keuze geen implementatie van de tabel starten.
 - Geen inline styles; CSS gaat in de juiste stijllaag (zie CSS-governance in `AGENTS.md`).
+
+**Standaard vraagtemplate (simpele taal, direct kopieerbaar):**
+```
+Voor deze tabel: kies per regel 1 optie (je mag alleen het nummer sturen).
+1. Klik op rij opent bewerken: 1) Ja 2) Nee
+2. Horizontale scrollbar: 1) Auto 2) Altijd aan 3) Uit
+3. Acties kolom rechts sticky: 1) Ja 2) Nee
+4. Kolommen verbergen/herordenen: 1) Ja 2) Nee
+5. Kolommen handmatig breder/smaller slepen: 1) Ja 2) Nee
+6. Standaard aantal rijen: 1) 10 2) 25 3) 50 4) Anders
+7. Rijen-opties in dropdown: 1) 10/25/50 2) 5/10/25/50/100 3) Anders
+8. Optie "Alle" tonen: 1) Ja 2) Nee
+9. Voorkeuren per user/device opslaan: 1) Ja 2) Nee
+```
 
 **Checklist vóór oplevering:**
 - [ ] Route beveiligd met `requireAuth` + `requirePermission`

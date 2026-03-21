@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { getJson } from "../api";
 import { getBootstrap, loadBootstrap } from "../bootstrap";
 
@@ -39,6 +39,7 @@ export default function usePermissions(enabled = true) {
   const bootstrap = getBootstrap();
   const bootstrapPermissions = enabled ? bootstrap.permissions : null;
   const cachedPermissions = enabled ? bootstrapPermissions || getStoredPermissions() : null;
+  const hasCachedPermissionsRef = useRef(Boolean(cachedPermissions));
   const [permissions, setPermissions] = useState(cachedPermissions || DEFAULT_STATE);
   const [loading, setLoading] = useState(enabled && !cachedPermissions);
 
@@ -54,15 +55,13 @@ export default function usePermissions(enabled = true) {
           storePermissions(next);
         })
         .catch(() => {
-          if (mounted && !cachedPermissions) setPermissions(DEFAULT_STATE);
+          if (mounted && !hasCachedPermissionsRef.current) setPermissions(DEFAULT_STATE);
         })
         .finally(() => {
           if (mounted) setLoading(false);
         });
     };
     if (!enabled) {
-      setPermissions(DEFAULT_STATE);
-      setLoading(false);
       storePermissions(DEFAULT_STATE);
       return () => {
         mounted = false;
@@ -90,5 +89,9 @@ export default function usePermissions(enabled = true) {
     };
   }, [enabled]);
 
-  return { permissions, loading, hasCache: Boolean(cachedPermissions) };
+  return {
+    permissions: enabled ? permissions : DEFAULT_STATE,
+    loading: enabled ? loading : false,
+    hasCache: enabled ? Boolean(cachedPermissions) : false,
+  };
 }

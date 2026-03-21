@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { deleteJson, getJson, postJson, putJson } from "../api";
 import ClientTable from "../components/ClientTable.jsx";
 
@@ -35,20 +35,19 @@ function Modal({ title, open, onClose, onSubmit, children, submitLabel }) {
 }
 
 export default function Stamgegevens() {
-  const [activeTab, setActiveTab] = useState("statussen");
+  const [activeTab, setActiveTab] = useState(() => {
+    const stored = localStorage.getItem("stamgegevens_tab");
+    if (stored && TABS.some((tab) => tab.key === stored)) {
+      return stored;
+    }
+    return "statussen";
+  });
   const [statussen, setStatussen] = useState([]);
   const [modalState, setModalState] = useState({ type: null, data: null });
   const modalLabel = useMemo(() => {
     if (!modalState.type) return "";
     return { statussen: "status" }[modalState.type] || "";
   }, [modalState.type]);
-
-  useEffect(() => {
-    const stored = localStorage.getItem("stamgegevens_tab");
-    if (stored && TABS.some((tab) => tab.key === stored)) {
-      setActiveTab(stored);
-    }
-  }, []);
 
   useEffect(() => {
     localStorage.setItem("stamgegevens_tab", activeTab);
@@ -58,30 +57,37 @@ export default function Stamgegevens() {
     getJson("/stamgegevens/statussen").then(setStatussen).catch(() => setStatussen([]));
   }, []);
 
-  useEffect(() => {
-    window.editStatus = (id, rowData) => setModalState({ type: "statussen", data: { id, ...rowData } });
-    window.deleteStatus = (id) => handleDelete("statussen", id);
-  }, []);
-
   const statussenColumns = useMemo(
     () => [
-      { key: "status", label: "Status", sortable: true },
-      { key: "volgorde", label: "Volgorde", sortable: true },
+      { key: "status", label: "Status", sortable: true, widthWeight: 2, minWidth: "220px" },
+      { key: "volgorde", label: "Volgorde", sortable: true, widthWeight: 1, minWidth: "130px" },
     ],
     []
   );
 
-  const handleDelete = async (type, id) => {
+  const refreshType = useCallback((type) => {
+    if (type === "statussen") {
+      return getJson("/stamgegevens/statussen").then(setStatussen).catch(() => setStatussen([]));
+    }
+    return Promise.resolve();
+  }, []);
+
+  const handleDelete = useCallback(async (type, id) => {
     if (!window.confirm("Weet je zeker dat je dit item wilt verwijderen?")) {
       return;
     }
     await deleteJson(`/stamgegevens/${type}/${id}`);
     refreshType(type);
-  };
+  }, [refreshType]);
 
-  const refreshType = (type) => {
-    if (type === "statussen") getJson("/stamgegevens/statussen").then(setStatussen);
-  };
+  useEffect(() => {
+    window.editStatus = (id, rowData) => setModalState({ type: "statussen", data: { id, ...rowData } });
+    window.deleteStatus = (id) => handleDelete("statussen", id);
+    return () => {
+      delete window.editStatus;
+      delete window.deleteStatus;
+    };
+  }, [handleDelete]);
 
   const handleSave = async (event) => {
     event.preventDefault();
@@ -124,6 +130,9 @@ export default function Stamgegevens() {
             enableDragDrop
             enableColumnFilters
             exportEnabled
+            horizontalScroll="auto"
+            actionsColumnWidth={108}
+            enableColumnCustomization
             onRowReorder={(newData) => handleOrder("statussen", newData)}
           />
         </>

@@ -50,12 +50,13 @@ function MicrosoftAuthBridge() {
 function App() {
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem(SIDEBAR_KEY) === "1");
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [profileOpen, setProfileOpen] = useState(false);
+  const [profileMenuPath, setProfileMenuPath] = useState(null);
   const [authRouteUser, setAuthRouteUser] = useState(null);
   const profileBtnRef = useRef(null);
   const [dropdownStyle, setDropdownStyle] = useState({});
   const location = useLocation();
   const navigate = useNavigate();
+  const profileOpen = profileMenuPath === location.pathname;
   const isAuthRoute = useMemo(() => {
     const path = location.pathname;
     return (
@@ -145,10 +146,6 @@ function App() {
   }, [filteredNavItems, location.pathname]);
 
   useEffect(() => {
-    setProfileOpen(false);
-  }, [location.pathname]);
-
-  useEffect(() => {
     if (profileOpen && collapsed && profileBtnRef.current) {
       const rect = profileBtnRef.current.getBoundingClientRect();
       setDropdownStyle({
@@ -165,7 +162,6 @@ function App() {
   useEffect(() => {
     let mounted = true;
     if (!isAuthRoute) {
-      setAuthRouteUser(null);
       return () => {
         mounted = false;
       };
@@ -294,7 +290,9 @@ function App() {
               ref={profileBtnRef}
               className="user-info"
               type="button"
-              onClick={() => setProfileOpen((open) => !open)}
+              onClick={() =>
+                setProfileMenuPath((openPath) => (openPath === location.pathname ? null : location.pathname))
+              }
               aria-expanded={profileOpen}
               aria-haspopup="true"
             >
@@ -314,7 +312,7 @@ function App() {
                   <NavLink
                     to="/profiel"
                     className="profile-dropdown-item"
-                    onClick={() => setProfileOpen(false)}
+                    onClick={() => setProfileMenuPath(null)}
                   >
                     <i className="fas fa-id-badge" />
                     <span>Mijn profiel</span>
@@ -324,7 +322,7 @@ function App() {
                   type="button"
                   className="profile-dropdown-item logout-item"
                   onClick={() => {
-                    setProfileOpen(false);
+                    setProfileMenuPath(null);
                     logout().finally(() => navigate("/login", { replace: true }));
                   }}
                 >

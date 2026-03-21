@@ -328,14 +328,17 @@ a:hover {
 
 .main-content {
     background-color: var(--bg-primary) !important;
+    min-width: 0;
 }
 
 .content-area {
     background-color: var(--bg-primary) !important;
+    min-width: 0;
 }
 
 .page-container {
     background-color: transparent !important;
+    min-width: 0;
 }
 
 /* ===== SCROLLBAR THEMING ===== */

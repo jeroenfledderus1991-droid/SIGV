@@ -1,6 +1,28 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { deleteJson, getJson, postJson } from "../api";
 import ClientTable from "../components/ClientTable.jsx";
+
+function normalizeAccountUser(user) {
+  const rawLastLogin = user?.last_login;
+  if (rawLastLogin === null || rawLastLogin === undefined || rawLastLogin === "") {
+    return user;
+  }
+
+  const parsedDate = new Date(rawLastLogin);
+  if (Number.isFinite(parsedDate.getTime()) && parsedDate.getFullYear() <= 1900) {
+    return { ...user, last_login: null };
+  }
+
+  if (String(rawLastLogin).startsWith("1900-01-01")) {
+    return { ...user, last_login: null };
+  }
+
+  return user;
+}
+
+function normalizeAccountUsers(users) {
+  return Array.isArray(users) ? users.map((user) => normalizeAccountUser(user)) : [];
+}
 
 export default function Accountbeheer() {
   const [users, setUsers] = useState([]);
@@ -9,37 +31,49 @@ export default function Accountbeheer() {
   const [canManageSuperAdmin, setCanManageSuperAdmin] = useState(false);
 
   useEffect(() => {
-    getJson("/accounts/users").then(setUsers).catch(() => setUsers([]));
+    getJson("/accounts/users")
+      .then((data) => setUsers(normalizeAccountUsers(data)))
+      .catch(() => setUsers([]));
     getJson("/accounts/roles").then(setRoles).catch(() => setRoles([]));
     getJson("/auth/me")
       .then((me) => setCanManageSuperAdmin((me?.email || "").toLowerCase() === "eesa@admin.local"))
       .catch(() => setCanManageSuperAdmin(false));
   }, []);
 
-  useEffect(() => {
-    window.editAccountRole = (id, rowData) => setModalState({ open: true, user: { id, ...rowData } });
-    window.deleteAccount = (id) => handleDelete(id);
-  }, []);
-
   const columns = useMemo(
     () => [
-      { key: "username", label: "Gebruiker", sortable: true },
-      { key: "email", label: "Email", sortable: true },
-      { key: "role", label: "Rol", sortable: true },
-      { key: "last_login", label: "Laatste login", sortable: true, type: "datetime" },
+      { key: "username", label: "Gebruiker", sortable: true, widthWeight: 1.1, minWidth: "170px" },
+      { key: "email", label: "Email", sortable: true, widthWeight: 1.6, minWidth: "230px" },
+      { key: "role", label: "Rol", sortable: true, widthWeight: 0.9, minWidth: "150px" },
+      { key: "last_login", label: "Laatste login", sortable: true, type: "datetime", widthWeight: 1.2, minWidth: "190px" },
     ],
     []
   );
 
-  const refreshUsers = () => getJson("/accounts/users").then(setUsers).catch(() => setUsers([]));
+  const refreshUsers = useCallback(
+    () =>
+      getJson("/accounts/users")
+        .then((data) => setUsers(normalizeAccountUsers(data)))
+        .catch(() => setUsers([])),
+    []
+  );
 
-  const handleDelete = async (id) => {
+  const handleDelete = useCallback(async (id) => {
     if (!window.confirm("Weet je zeker dat je dit account wilt verwijderen?")) {
       return;
     }
     await deleteJson(`/accounts/users/${id}`);
     refreshUsers();
-  };
+  }, [refreshUsers]);
+
+  useEffect(() => {
+    window.editAccountRole = (id, rowData) => setModalState({ open: true, user: { id, ...rowData } });
+    window.deleteAccount = (id) => handleDelete(id);
+    return () => {
+      delete window.editAccountRole;
+      delete window.deleteAccount;
+    };
+  }, [handleDelete]);
 
   const handleSaveRole = async (event) => {
     event.preventDefault();
@@ -72,6 +106,11 @@ export default function Accountbeheer() {
             searchEnabled
             enableColumnFilters
             exportEnabled
+            enableRowClickAction
+            rowClickActionType="edit"
+            horizontalScroll="auto"
+            actionsColumnWidth={112}
+            enableColumnCustomization
           />
         </div>
       </div>

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { getJson, postJson } from "../api";
 import { getBootstrap, loadBootstrap } from "../bootstrap";
 
@@ -33,9 +33,9 @@ function getInitialUser() {
 }
 
 export default function useAuth(enabled = true) {
-  const initialUserRef = useRef(getInitialUser());
-  const [user, setUser] = useState(initialUserRef.current);
-  const [loading, setLoading] = useState(enabled && !initialUserRef.current);
+  const initialUser = getInitialUser();
+  const [user, setUser] = useState(initialUser);
+  const [loading, setLoading] = useState(enabled);
   const [ready, setReady] = useState(!enabled);
 
   const refresh = useCallback(() => {
@@ -65,26 +65,29 @@ export default function useAuth(enabled = true) {
 
   useEffect(() => {
     if (!enabled) {
-      setLoading(false);
-      setReady(true);
       return;
     }
     let mounted = true;
-    const immediateUser = getInitialUser();
-    if (immediateUser) {
-      setUser(immediateUser);
-      storeUser(immediateUser);
-      setLoading(false);
-      setReady(true);
-      return () => {
-        mounted = false;
-      };
-    }
-    setLoading(true);
-    setReady(false);
+    const updateLocalState = ({ nextUser, nextLoading, nextReady }) => {
+      Promise.resolve().then(() => {
+        if (!mounted) return;
+        if (nextUser !== undefined) setUser(nextUser);
+        if (typeof nextLoading === "boolean") setLoading(nextLoading);
+        if (typeof nextReady === "boolean") setReady(nextReady);
+      });
+    };
+    updateLocalState({ nextLoading: true, nextReady: false });
     loadBootstrap()
       .then((bootstrap) => {
         if (!mounted) return;
+        if (bootstrap && Object.prototype.hasOwnProperty.call(bootstrap, "user")) {
+          const bootstrapUser = bootstrap.user || null;
+          setUser(bootstrapUser);
+          storeUser(bootstrapUser);
+          setLoading(false);
+          setReady(true);
+          return;
+        }
         if (bootstrap?.user) {
           setUser(bootstrap.user);
           storeUser(bootstrap.user);
@@ -109,5 +112,12 @@ export default function useAuth(enabled = true) {
   }, [refresh, enabled]);
 
   const hasCache = Boolean(user || getInitialUser());
-  return { user, loading, refresh, logout, hasCache, ready };
+  return {
+    user,
+    loading: enabled ? loading : false,
+    refresh,
+    logout,
+    hasCache,
+    ready: enabled ? ready : true,
+  };
 }

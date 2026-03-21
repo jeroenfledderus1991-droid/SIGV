@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { getJson } from "../api";
 import { getBootstrap, loadBootstrap } from "../bootstrap";
 
@@ -49,6 +49,7 @@ export default function useAppSettings() {
   const bootstrap = getBootstrap();
   const bootstrapSettings = bootstrap.appSettings || null;
   const cachedSettings = bootstrapSettings || getStoredSettings();
+  const hasCachedSettingsRef = useRef(Boolean(cachedSettings));
   const [settings, setSettings] = useState(cachedSettings || DEFAULT_SETTINGS);
   const [loading, setLoading] = useState(!cachedSettings);
 
@@ -64,7 +65,7 @@ export default function useAppSettings() {
           storeSettings(merged);
         })
         .catch(() => {
-          if (mounted && !cachedSettings) setSettings(DEFAULT_SETTINGS);
+          if (mounted && !hasCachedSettingsRef.current) setSettings(DEFAULT_SETTINGS);
         })
         .finally(() => {
           if (mounted) setLoading(false);

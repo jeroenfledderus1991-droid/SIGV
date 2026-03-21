@@ -21,6 +21,8 @@ class ClientTable {
             enablePagination: options.enablePagination !== false,
             enableRowSelector: options.enableRowSelector !== false,
             enableDragDrop: options.enableDragDrop || false,
+            enableRowClickAction: options.enableRowClickAction || false,
+            rowClickActionType: options.rowClickActionType || 'auto',
             columns: options.columns || [],
             searchPlaceholder: options.searchPlaceholder || 'Zoeken...',
             noDataMessage: options.noDataMessage || 'Geen data beschikbaar',
@@ -40,6 +42,7 @@ class ClientTable {
         this.sortColumn = null;
         this.sortDirection = 'asc';
         this.columnFilters = {}; // Store active filters per column
+        this.EMPTY_FILTER_TOKEN = '__CLIENT_TABLE_EMPTY__';
         
         // Initialize
         this.init();
@@ -57,7 +60,12 @@ class ClientTable {
     }
 
     parseDateValue(value) {
-        if (value instanceof Date) return value;
+        if (value === null || value === undefined || value === '') {
+            return null;
+        }
+        if (value instanceof Date) {
+            return Number.isNaN(value.getTime()) ? null : value;
+        }
         if (typeof value === 'string') {
             const dateOnlyMatch = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
             if (dateOnlyMatch) {
@@ -79,7 +87,23 @@ class ClientTable {
             }
         }
 
-        return new Date(value);
+        const parsed = new Date(value);
+        return Number.isNaN(parsed.getTime()) ? null : parsed;
+    }
+
+    isEmptyFilterValue(value) {
+        return value === null || value === undefined || value === '';
+    }
+
+    normalizeValueForFilterStorage(value) {
+        return this.isEmptyFilterValue(value) ? this.EMPTY_FILTER_TOKEN : value;
+    }
+
+    valuesMatchForFilter(allowedValue, itemValue) {
+        if (allowedValue === this.EMPTY_FILTER_TOKEN) {
+            return this.isEmptyFilterValue(itemValue);
+        }
+        return allowedValue == itemValue;
     }
     
     attachEventListeners() {
@@ -194,31 +218,40 @@ class ClientTable {
     }
     
     populateColumnFilterDropdown(columnKey, dropdown) {
+        const column = this.config.columns.find(col => col.key === columnKey);
+        if (column && (column.type === 'date' || column.type === 'datetime')) {
+            this.populateDateHierarchyFilterDropdown(columnKey, dropdown, column);
+            return;
+        }
+        dropdown.classList.remove('filter-dropdown-date-tree');
+
         // Get unique values for this column with proper normalization
         const uniqueValuesMap = new Map(); // Use Map to track both raw and normalized values
-        const column = this.config.columns.find(col => col.key === columnKey);
         
         this.originalData.forEach(item => {
             let value = item[columnKey];
-            if (value === null || value === undefined || value === '') {
-                return;
-            }
             
             // Normalize value based on column type to ensure uniqueness
             let normalizedKey = value;
-            if (column && column.type === 'boolean') {
+            if (this.isEmptyFilterValue(value)) {
+                normalizedKey = this.EMPTY_FILTER_TOKEN;
+            } else if (column && column.type === 'boolean') {
                 // Normalize boolean values to consistent format
                 normalizedKey = (value === 1 || value === true || value === '1' || String(value).toLowerCase() === 'true') ? '1' : '0';
             } else if (column && (column.type === 'date' || column.type === 'datetime')) {
                 // Normalize dates/datetimes to date-only string (ignore time) for comparison
                 try {
                     const date = this.parseDateValue(value);
-                    // Use YYYY-MM-DD format to ignore time component
-                    normalizedKey = date.getFullYear() + '-' + 
-                                   String(date.getMonth() + 1).padStart(2, '0') + '-' + 
-                                   String(date.getDate()).padStart(2, '0');
-                } catch (e) {
-                    normalizedKey = String(value);
+                    if (date) {
+                        // Use YYYY-MM-DD format to ignore time component
+                        normalizedKey = date.getFullYear() + '-' +
+                                       String(date.getMonth() + 1).padStart(2, '0') + '-' +
+                                       String(date.getDate()).padStart(2, '0');
+                    } else {
+                        normalizedKey = this.EMPTY_FILTER_TOKEN;
+                    }
+                } catch {
+                    normalizedKey = this.EMPTY_FILTER_TOKEN;
                 }
             } else if (column && column.type === 'currency') {
                 // Normalize currency to number
@@ -230,7 +263,7 @@ class ClientTable {
             
             // Use normalized key to prevent duplicates
             if (!uniqueValuesMap.has(normalizedKey)) {
-                uniqueValuesMap.set(normalizedKey, value);
+                uniqueValuesMap.set(normalizedKey, this.normalizeValueForFilterStorage(value));
             }
         });
         
@@ -238,7 +271,11 @@ class ClientTable {
         const sortedValues = Array.from(uniqueValuesMap.values()).sort((a, b) => {
             if (typeof a === 'number' && typeof b === 'number') return a - b;
             if (column && (column.type === 'date' || column.type === 'datetime')) {
-                return this.parseDateValue(a) - this.parseDateValue(b);
+                const dateA = this.parseDateValue(a);
+                const dateB = this.parseDateValue(b);
+                const timeA = dateA ? dateA.getTime() : Number.POSITIVE_INFINITY;
+                const timeB = dateB ? dateB.getTime() : Number.POSITIVE_INFINITY;
+                return timeA - timeB;
             }
             return String(a).localeCompare(String(b));
         });
@@ -261,8 +298,11 @@ class ClientTable {
         html += '</div>';
         
         // Individual options
+        const selectedValueSet = this.columnFilters[columnKey]
+            ? new Set(this.columnFilters[columnKey].map((filterValue) => String(this.normalizeValueForFilterStorage(filterValue))))
+            : null;
         sortedValues.forEach(value => {
-            const isChecked = !this.columnFilters[columnKey] || this.columnFilters[columnKey].includes(value);
+            const isChecked = !selectedValueSet || selectedValueSet.has(String(value));
             const displayValue = this.formatFilterValue(value, columnKey);
             html += `
                 <label class="filter-option">
@@ -287,12 +327,363 @@ class ClientTable {
             });
         }
     }
+
+    getUniqueColumnValues(columnKey) {
+        const uniqueValues = new Set();
+        this.originalData.forEach(item => {
+            const value = item[columnKey];
+            uniqueValues.add(this.normalizeValueForFilterStorage(value));
+        });
+        return Array.from(uniqueValues);
+    }
+
+    getFilterDropdownForColumn(columnKey) {
+        const filterToggle = document.querySelector(`#${this.tableId} thead .filter-toggle[data-column="${columnKey}"]`);
+        if (!filterToggle) return null;
+        return filterToggle.nextElementSibling || null;
+    }
+
+    buildDateFilterHierarchy(uniqueValues, includeTime = false) {
+        const monthFormatter = new Intl.DateTimeFormat('nl-NL', { month: 'long' });
+        const yearsMap = new Map();
+        const emptyValues = new Set();
+
+        uniqueValues.forEach((rawValue) => {
+            if (rawValue === this.EMPTY_FILTER_TOKEN) {
+                emptyValues.add(this.EMPTY_FILTER_TOKEN);
+                return;
+            }
+            let dateObj;
+            try {
+                dateObj = this.parseDateValue(rawValue);
+            } catch {
+                emptyValues.add(this.normalizeValueForFilterStorage(rawValue));
+                return;
+            }
+
+            if (!(dateObj instanceof Date) || Number.isNaN(dateObj.getTime())) {
+                emptyValues.add(this.normalizeValueForFilterStorage(rawValue));
+                return;
+            }
+
+            const year = dateObj.getFullYear();
+            const month = dateObj.getMonth() + 1;
+            const day = dateObj.getDate();
+
+            if (!yearsMap.has(year)) {
+                yearsMap.set(year, {
+                    year,
+                    rawValues: new Set(),
+                    months: new Map(),
+                });
+            }
+            const yearNode = yearsMap.get(year);
+            yearNode.rawValues.add(rawValue);
+
+            if (!yearNode.months.has(month)) {
+                yearNode.months.set(month, {
+                    month,
+                    label: monthFormatter.format(new Date(year, month - 1, 1)),
+                    rawValues: new Set(),
+                    days: new Map(),
+                });
+            }
+            const monthNode = yearNode.months.get(month);
+            monthNode.rawValues.add(rawValue);
+
+            if (!monthNode.days.has(day)) {
+                monthNode.days.set(day, {
+                    day,
+                    rawValues: new Set(),
+                    times: new Map(),
+                });
+            }
+            const dayNode = monthNode.days.get(day);
+            dayNode.rawValues.add(rawValue);
+
+            if (includeTime) {
+                const hours = String(dateObj.getHours()).padStart(2, '0');
+                const minutes = String(dateObj.getMinutes()).padStart(2, '0');
+                const seconds = String(dateObj.getSeconds()).padStart(2, '0');
+                const timeKey = `${hours}:${minutes}:${seconds}`;
+
+                if (!dayNode.times.has(timeKey)) {
+                    dayNode.times.set(timeKey, {
+                        key: timeKey,
+                        label: seconds === '00' ? `${hours}:${minutes}` : timeKey,
+                        rawValues: new Set(),
+                    });
+                }
+                dayNode.times.get(timeKey).rawValues.add(rawValue);
+            }
+        });
+
+        const sortedYears = Array.from(yearsMap.values())
+            .sort((a, b) => b.year - a.year)
+            .map((yearNode) => ({
+                ...yearNode,
+                rawValues: Array.from(yearNode.rawValues),
+                months: Array.from(yearNode.months.values())
+                    .sort((a, b) => a.month - b.month)
+                    .map((monthNode) => ({
+                        ...monthNode,
+                        label: monthNode.label.charAt(0).toUpperCase() + monthNode.label.slice(1),
+                        rawValues: Array.from(monthNode.rawValues),
+                        days: Array.from(monthNode.days.values())
+                            .sort((a, b) => a.day - b.day)
+                            .map((dayNode) => ({
+                                ...dayNode,
+                                rawValues: Array.from(dayNode.rawValues),
+                                times: Array.from(dayNode.times.values())
+                                    .sort((a, b) => a.key.localeCompare(b.key))
+                                    .map((timeNode) => ({
+                                        ...timeNode,
+                                        rawValues: Array.from(timeNode.rawValues),
+                                    })),
+                            })),
+                    })),
+            }));
+
+        return {
+            years: sortedYears,
+            emptyValues: Array.from(emptyValues),
+        };
+    }
+
+    createDateGroupCheckbox({ label, valueList, className }) {
+        const wrapper = document.createElement('label');
+        wrapper.className = `date-filter-group-option ${className || ''}`.trim();
+
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.className = 'date-filter-group-checkbox';
+        checkbox.dataset.values = JSON.stringify(valueList.map((value) => String(value)));
+
+        const text = document.createElement('span');
+        text.textContent = label;
+
+        wrapper.appendChild(checkbox);
+        wrapper.appendChild(text);
+        return { wrapper, checkbox };
+    }
+
+    populateDateHierarchyFilterDropdown(columnKey, dropdown, column) {
+        const uniqueValues = this.getUniqueColumnValues(columnKey);
+        const includeTime = column.type === 'datetime';
+        const { years: hierarchy, emptyValues } = this.buildDateFilterHierarchy(uniqueValues, includeTime);
+
+        dropdown.innerHTML = '';
+        dropdown.classList.add('filter-dropdown-date-tree');
+
+        const actions = document.createElement('div');
+        actions.className = 'filter-actions';
+        actions.innerHTML = `
+            <button class="filter-action-btn" type="button">Alles selecteren</button>
+            <button class="filter-action-btn" type="button">Alles deselecteren</button>
+        `;
+        const [selectAllBtn, deselectAllBtn] = actions.querySelectorAll('.filter-action-btn');
+        selectAllBtn.addEventListener('click', () => this.selectAllFilters(columnKey));
+        deselectAllBtn.addEventListener('click', () => this.deselectAllFilters(columnKey));
+        dropdown.appendChild(actions);
+
+        const tree = document.createElement('div');
+        tree.className = 'filter-options filter-options-date-tree';
+        dropdown.appendChild(tree);
+
+        if (emptyValues.length > 0) {
+            const { wrapper: emptyOption, checkbox: emptyCheckbox } = this.createDateGroupCheckbox({
+                label: '(Leeg)',
+                valueList: emptyValues,
+                className: 'filter-option date-filter-leaf-option date-filter-level-empty',
+            });
+            emptyCheckbox.addEventListener('change', () => {
+                this.applyDateGroupSelection(columnKey, emptyValues, emptyCheckbox.checked, dropdown);
+            });
+            tree.appendChild(emptyOption);
+        }
+
+        hierarchy.forEach((yearNode) => {
+            const yearDetails = document.createElement('details');
+            yearDetails.className = 'date-filter-group date-filter-group-year';
+            yearDetails.open = true;
+
+            const yearSummary = document.createElement('summary');
+            const { wrapper: yearWrapper, checkbox: yearCheckbox } = this.createDateGroupCheckbox({
+                label: `${yearNode.year}`,
+                valueList: yearNode.rawValues,
+                className: 'date-filter-group-label date-filter-level-year',
+            });
+            yearSummary.appendChild(yearWrapper);
+            yearDetails.appendChild(yearSummary);
+
+            yearCheckbox.addEventListener('click', (event) => event.stopPropagation());
+            yearCheckbox.addEventListener('change', () => {
+                this.applyDateGroupSelection(columnKey, yearNode.rawValues, yearCheckbox.checked, dropdown);
+            });
+
+            const monthsContainer = document.createElement('div');
+            monthsContainer.className = 'date-filter-children date-filter-children-months';
+            yearDetails.appendChild(monthsContainer);
+
+            yearNode.months.forEach((monthNode) => {
+                const monthDetails = document.createElement('details');
+                monthDetails.className = 'date-filter-group date-filter-group-month';
+                monthDetails.open = true;
+
+                const monthSummary = document.createElement('summary');
+                const { wrapper: monthWrapper, checkbox: monthCheckbox } = this.createDateGroupCheckbox({
+                    label: monthNode.label,
+                    valueList: monthNode.rawValues,
+                    className: 'date-filter-group-label date-filter-level-month',
+                });
+                monthSummary.appendChild(monthWrapper);
+                monthDetails.appendChild(monthSummary);
+
+                monthCheckbox.addEventListener('click', (event) => event.stopPropagation());
+                monthCheckbox.addEventListener('change', () => {
+                    this.applyDateGroupSelection(columnKey, monthNode.rawValues, monthCheckbox.checked, dropdown);
+                });
+
+                const daysContainer = document.createElement('div');
+                daysContainer.className = 'date-filter-children date-filter-children-days';
+                monthDetails.appendChild(daysContainer);
+
+                monthNode.days.forEach((dayNode) => {
+                    if (includeTime && dayNode.times.length > 0) {
+                        const dayDetails = document.createElement('details');
+                        dayDetails.className = 'date-filter-group date-filter-group-day';
+                        dayDetails.open = false;
+
+                        const daySummary = document.createElement('summary');
+                        const { wrapper: dayWrapper, checkbox: dayCheckbox } = this.createDateGroupCheckbox({
+                            label: `${String(dayNode.day).padStart(2, '0')}`,
+                            valueList: dayNode.rawValues,
+                            className: 'date-filter-group-label date-filter-level-day',
+                        });
+                        daySummary.appendChild(dayWrapper);
+                        dayDetails.appendChild(daySummary);
+
+                        dayCheckbox.addEventListener('click', (event) => event.stopPropagation());
+                        dayCheckbox.addEventListener('change', () => {
+                            this.applyDateGroupSelection(columnKey, dayNode.rawValues, dayCheckbox.checked, dropdown);
+                        });
+
+                        const timesContainer = document.createElement('div');
+                        timesContainer.className = 'date-filter-children date-filter-children-times';
+                        dayDetails.appendChild(timesContainer);
+
+                        dayNode.times.forEach((timeNode) => {
+                            const { wrapper: option, checkbox } = this.createDateGroupCheckbox({
+                                label: timeNode.label,
+                                valueList: timeNode.rawValues,
+                                className: 'filter-option date-filter-leaf-option date-filter-level-time',
+                            });
+                            checkbox.addEventListener('change', () => {
+                                this.applyDateGroupSelection(columnKey, timeNode.rawValues, checkbox.checked, dropdown);
+                            });
+                            timesContainer.appendChild(option);
+                        });
+
+                        daysContainer.appendChild(dayDetails);
+                    } else {
+                        const { wrapper: option, checkbox } = this.createDateGroupCheckbox({
+                            label: `${String(dayNode.day).padStart(2, '0')}`,
+                            valueList: dayNode.rawValues,
+                            className: 'filter-option date-filter-leaf-option date-filter-level-day',
+                        });
+                        checkbox.addEventListener('change', () => {
+                            this.applyDateGroupSelection(columnKey, dayNode.rawValues, checkbox.checked, dropdown);
+                        });
+                        daysContainer.appendChild(option);
+                    }
+                });
+
+                monthsContainer.appendChild(monthDetails);
+            });
+
+            tree.appendChild(yearDetails);
+        });
+
+        dropdown.dataset.populated = 'true';
+        this.syncDateFilterSelectionState(columnKey, dropdown);
+    }
+
+    applyDateGroupSelection(columnKey, rawValues, isChecked, dropdown) {
+        if (!this.columnFilters[columnKey]) {
+            this.columnFilters[columnKey] = this.getUniqueColumnValues(columnKey);
+        }
+
+        const selectedSet = new Set(
+            this.columnFilters[columnKey].map((value) => String(this.normalizeValueForFilterStorage(value)))
+        );
+        rawValues.forEach((rawValue) => {
+            const key = String(this.normalizeValueForFilterStorage(rawValue));
+            if (isChecked) {
+                selectedSet.add(key);
+            } else {
+                selectedSet.delete(key);
+            }
+        });
+        this.columnFilters[columnKey] = Array.from(selectedSet);
+
+        this.syncDateFilterSelectionState(columnKey, dropdown);
+        this.updateFilterIndicator(columnKey);
+        this.currentPage = 1;
+        this.filterAndSort();
+        this.render();
+    }
+
+    syncDateFilterSelectionState(columnKey, dropdown) {
+        if (!dropdown || !dropdown.classList.contains('filter-dropdown-date-tree')) {
+            return;
+        }
+
+        const selectedSet = this.columnFilters[columnKey]
+            ? new Set(this.columnFilters[columnKey].map((value) => String(this.normalizeValueForFilterStorage(value))))
+            : null;
+
+        dropdown.querySelectorAll('.date-filter-group-checkbox').forEach((checkbox) => {
+            let values = [];
+            try {
+                values = JSON.parse(checkbox.dataset.values || '[]');
+            } catch {
+                values = [];
+            }
+
+            if (!values.length) {
+                checkbox.checked = false;
+                checkbox.indeterminate = false;
+                return;
+            }
+
+            const selectedCount = selectedSet
+                ? values.reduce(
+                    (count, value) => count + (selectedSet.has(String(this.normalizeValueForFilterStorage(value))) ? 1 : 0),
+                    0
+                )
+                : values.length;
+
+            if (selectedCount === 0) {
+                checkbox.checked = false;
+                checkbox.indeterminate = false;
+            } else if (selectedCount === values.length) {
+                checkbox.checked = true;
+                checkbox.indeterminate = false;
+            } else {
+                checkbox.checked = false;
+                checkbox.indeterminate = true;
+            }
+        });
+    }
     
     formatFilterValue(value, columnKey) {
         // Find column config
         const column = this.config.columns.find(col => col.key === columnKey);
         
         if (!column) return value;
+        if (value === this.EMPTY_FILTER_TOKEN || this.isEmptyFilterValue(value)) {
+            return '(Leeg)';
+        }
         
         // Format based on type
         if (column.type === 'boolean') {
@@ -300,9 +691,11 @@ class ClientTable {
             return isActive ? 'Actief' : 'Inactief';
         } else if (column.type === 'datetime') {
             // For filter dropdown, show only date (not time)
-            return this.parseDateValue(value).toLocaleDateString('nl-NL');
+            const dateValue = this.parseDateValue(value);
+            return dateValue ? dateValue.toLocaleDateString('nl-NL') : '';
         } else if (column.type === 'date') {
-            return this.parseDateValue(value).toLocaleDateString('nl-NL');
+            const dateValue = this.parseDateValue(value);
+            return dateValue ? dateValue.toLocaleDateString('nl-NL') : '';
         } else if (column.type === 'currency') {
             return '€ ' + parseFloat(value).toLocaleString('nl-NL', {
                 minimumFractionDigits: 2,
@@ -357,7 +750,9 @@ class ClientTable {
                 const column = this.config.columns.find(col => col.key === columnKey);
                 let typedValue = value;
                 
-                if (column) {
+                if (value === this.EMPTY_FILTER_TOKEN) {
+                    typedValue = this.EMPTY_FILTER_TOKEN;
+                } else if (column) {
                     if (column.type === 'boolean') {
                         typedValue = value === 'true' || value === '1' || value === 1;
                     } else if (!isNaN(value) && value !== '') {
@@ -397,22 +792,16 @@ class ClientTable {
     handleColumnFilter(columnKey, value, isChecked) {
         // Initialize filter array for this column if not exists
         if (!this.columnFilters[columnKey]) {
-            // Get all unique values initially (all selected)
-            const uniqueValues = new Set();
-            this.originalData.forEach(item => {
-                const val = item[columnKey];
-                if (val !== null && val !== undefined && val !== '') {
-                    uniqueValues.add(val);
-                }
-            });
-            this.columnFilters[columnKey] = Array.from(uniqueValues);
+            this.columnFilters[columnKey] = this.getUniqueColumnValues(columnKey);
         }
         
         // Convert value to appropriate type
         const column = this.config.columns.find(col => col.key === columnKey);
         let typedValue = value;
         
-        if (column) {
+        if (value === this.EMPTY_FILTER_TOKEN) {
+            typedValue = this.EMPTY_FILTER_TOKEN;
+        } else if (column) {
             if (column.type === 'boolean') {
                 typedValue = value === 'true' || value === '1' || value === 1;
             } else if (!isNaN(value) && value !== '') {
@@ -428,6 +817,9 @@ class ClientTable {
         } else {
             this.columnFilters[columnKey] = this.columnFilters[columnKey].filter(v => v != typedValue);
         }
+
+        const dropdown = this.getFilterDropdownForColumn(columnKey);
+        this.syncDateFilterSelectionState(columnKey, dropdown);
         
         // Update filter indicator
         this.updateFilterIndicator(columnKey);
@@ -439,15 +831,7 @@ class ClientTable {
     }
     
     selectAllFilters(columnKey) {
-        const uniqueValues = new Set();
-        this.originalData.forEach(item => {
-            const value = item[columnKey];
-            if (value !== null && value !== undefined && value !== '') {
-                uniqueValues.add(value);
-            }
-        });
-        
-        this.columnFilters[columnKey] = Array.from(uniqueValues);
+        this.columnFilters[columnKey] = this.getUniqueColumnValues(columnKey);
         
         // Update all checkboxes
         const filterToggle = document.querySelector(`#${this.tableId} thead .filter-toggle[data-column="${columnKey}"]`);
@@ -456,6 +840,7 @@ class ClientTable {
             dropdown.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
                 checkbox.checked = true;
             });
+            this.syncDateFilterSelectionState(columnKey, dropdown);
         }
         
         // Update filter indicator
@@ -477,6 +862,7 @@ class ClientTable {
             dropdown.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
                 checkbox.checked = false;
             });
+            this.syncDateFilterSelectionState(columnKey, dropdown);
         }
         
         // Update filter indicator
@@ -492,16 +878,7 @@ class ClientTable {
         const filterToggle = document.querySelector(`#${this.tableId} thead .filter-toggle[data-column="${columnKey}"]`);
         if (!filterToggle) return;
         
-        // Get total unique values
-        const uniqueValues = new Set();
-        this.originalData.forEach(item => {
-            const value = item[columnKey];
-            if (value !== null && value !== undefined && value !== '') {
-                uniqueValues.add(value);
-            }
-        });
-        
-        const totalCount = uniqueValues.size;
+        const totalCount = this.getUniqueColumnValues(columnKey).length;
         const selectedCount = this.columnFilters[columnKey] ? this.columnFilters[columnKey].length : totalCount;
         
         // Update icon and indicator
@@ -592,8 +969,8 @@ class ClientTable {
             if (allowedValues && allowedValues.length > 0) {
                 filtered = filtered.filter(item => {
                     const itemValue = item[columnKey];
-                    // Check if item value is in allowed values
-                    return allowedValues.some(allowedValue => allowedValue == itemValue);
+                    // Check if item value is in allowed values (including empty token)
+                    return allowedValues.some(allowedValue => this.valuesMatchForFilter(allowedValue, itemValue));
                 });
             } else if (allowedValues && allowedValues.length === 0) {
                 // If no values selected, show nothing
@@ -647,7 +1024,7 @@ class ClientTable {
         if (pageData.length === 0) {
             const tr = document.createElement('tr');
             const td = document.createElement('td');
-            td.colSpan = this.config.columns.length + (this.config.actions ? 1 : 0);
+            td.colSpan = this.config.columns.length + (this.config.actions ? 2 : 0);
             td.textContent = this.config.noDataMessage;
             td.style.textAlign = 'center';
             td.style.padding = '2rem';
@@ -661,14 +1038,35 @@ class ClientTable {
             // Store data index for drag & drop reordering
             tr.dataset.itemIndex = start + index;
             tr.dataset.itemId = item.id || (start + index);
+            const itemId = item.Id || item.id || 0;
+            const rowClickAction = this.getRowClickAction();
+
+            if (rowClickAction) {
+                tr.classList.add('row-clickable');
+                tr.addEventListener('click', (event) => {
+                    if (event.target.closest('button, a, input, select, textarea, label')) {
+                        return;
+                    }
+                    this.executeAction(rowClickAction, itemId, item);
+                });
+            }
             
             this.config.columns.forEach(column => {
                 const td = document.createElement('td');
                 
-                // Apply width if specified
+                // Apply optional sizing if specified
                 if (column.width) {
-                    td.style.width = column.width;
-                    td.style.maxWidth = column.width;
+                    const widthValue = typeof column.width === 'number' ? `${column.width}px` : column.width;
+                    td.style.width = widthValue;
+                    td.style.maxWidth = widthValue;
+                }
+                if (column.minWidth) {
+                    const minWidthValue = typeof column.minWidth === 'number' ? `${column.minWidth}px` : column.minWidth;
+                    td.style.minWidth = minWidthValue;
+                }
+                if (column.maxWidth) {
+                    const maxWidthValue = typeof column.maxWidth === 'number' ? `${column.maxWidth}px` : column.maxWidth;
+                    td.style.maxWidth = maxWidthValue;
                 }
                 
                 let value = item[column.key];
@@ -682,14 +1080,19 @@ class ClientTable {
                 } else if (column.type === 'datetime') {
                     // DateTime: show both date and time
                     const dateObj = this.parseDateValue(value);
-                    const datePart = dateObj.toLocaleDateString('nl-NL');
-                    const timePart = dateObj.toLocaleTimeString('nl-NL', {
-                        hour: '2-digit',
-                        minute: '2-digit'
-                    });
-                    value = `${datePart} ${timePart}`;
+                    if (!dateObj) {
+                        value = '';
+                    } else {
+                        const datePart = dateObj.toLocaleDateString('nl-NL');
+                        const timePart = dateObj.toLocaleTimeString('nl-NL', {
+                            hour: '2-digit',
+                            minute: '2-digit'
+                        });
+                        value = `${datePart} ${timePart}`;
+                    }
                 } else if (column.type === 'date') {
-                    value = this.parseDateValue(value).toLocaleDateString('nl-NL');
+                    const dateObj = this.parseDateValue(value);
+                    value = dateObj ? dateObj.toLocaleDateString('nl-NL') : '';
                 } else if (column.type === 'boolean') {
                     // Convert boolean/number to Actief/Inactief
                     const isActive = value === 1 || value === true || value === '1' || String(value).toLowerCase() === 'true';
@@ -719,9 +1122,13 @@ class ClientTable {
             
             // Actions column
             if (this.config.actions) {
+                const fillerTd = document.createElement('td');
+                fillerTd.className = 'table-filler-cell';
+                fillerTd.setAttribute('aria-hidden', 'true');
+                tr.appendChild(fillerTd);
+
                 const actionTd = document.createElement('td');
                 actionTd.className = 'actions-column';
-                const itemId = item.Id || item.id || 0;
                 
                 // Filter out drag action (handled by enableDragDrop)
                 const visibleActions = this.config.actions.filter(action => action.type !== 'drag');
@@ -744,19 +1151,7 @@ class ClientTable {
                         btn.addEventListener('click', (e) => {
                             e.preventDefault();
                             e.stopPropagation();
-                            
-                            const handlerName = action.onClick;
-                            
-                            // Call the global function with id and row data
-                            if (handlerName && typeof window[handlerName] === 'function') {
-                                try {
-                                    window[handlerName](itemId, item);
-                                } catch (err) {
-                                    console.error(`Error calling ${handlerName}:`, err);
-                                }
-                            } else {
-                                console.warn(`Handler function "${handlerName}" not found on window object`);
-                            }
+                            this.executeAction(action, itemId, item);
                         });
                     }
                     
@@ -871,6 +1266,41 @@ class ClientTable {
             'download': 'download'
         };
         return icons[type] || 'cog';
+    }
+
+    getRowClickAction() {
+        if (!this.config.enableRowClickAction || !Array.isArray(this.config.actions)) {
+            return null;
+        }
+
+        const clickableActions = this.config.actions.filter(action => action.type !== 'drag' && action.onClick);
+        if (clickableActions.length === 0) {
+            return null;
+        }
+
+        if (this.config.rowClickActionType && this.config.rowClickActionType !== 'auto') {
+            const explicitAction = clickableActions.find(action => action.type === this.config.rowClickActionType);
+            if (explicitAction) {
+                return explicitAction;
+            }
+        }
+
+        return clickableActions.find(action => action.type === 'view')
+            || clickableActions.find(action => action.type === 'edit')
+            || clickableActions[0];
+    }
+
+    executeAction(action, itemId, item) {
+        const handlerName = action && action.onClick;
+        if (handlerName && typeof window[handlerName] === 'function') {
+            try {
+                window[handlerName](itemId, item);
+            } catch (err) {
+                console.error(`Error calling ${handlerName}:`, err);
+            }
+        } else {
+            console.warn(`Handler function "${handlerName}" not found on window object`);
+        }
     }
     
     // Delete confirmation modal
@@ -1127,6 +1557,18 @@ class ClientTable {
         this.originalData = newData;
         this.currentData = [...newData];
         this.currentPage = 1;
+        const validColumnKeys = new Set(this.config.columns.map(column => column.key));
+
+        Object.keys(this.columnFilters).forEach((columnKey) => {
+            if (!validColumnKeys.has(columnKey)) {
+                delete this.columnFilters[columnKey];
+            }
+        });
+
+        if (this.sortColumn && !validColumnKeys.has(this.sortColumn)) {
+            this.sortColumn = null;
+            this.sortDirection = 'asc';
+        }
         
         // Re-populate filter dropdowns with new data
         document.querySelectorAll(`#${this.tableId} thead .filter-dropdown`).forEach(dropdown => {
@@ -1266,11 +1708,6 @@ class ClientTable {
         document.body.removeChild(a);
         window.URL.revokeObjectURL(url);
     }
-}
-
-// Export for use in other scripts
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = ClientTable;
 }
 
 if (typeof window !== 'undefined') {

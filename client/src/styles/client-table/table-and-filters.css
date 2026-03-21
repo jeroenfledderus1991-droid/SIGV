@@ -4,14 +4,36 @@
 
 .table-responsive {
     overflow-x: auto;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    position: relative;
     --table-zoom: 1; /* Responsive scaling factor for table size */
     --table-min-scroll-width: 960px; /* When to allow horizontal scrolling */
+}
+
+.table-responsive--scroll {
+    overflow-x: auto;
+}
+
+.table-responsive--no-scroll {
+    overflow-x: hidden;
 }
 
 .standard-table {
     width: 100%;
     border-collapse: collapse;
     table-layout: fixed; /* Force table to respect column widths */
+    --actions-column-width: calc(120px * var(--table-zoom));
+    min-width: 100%;
+}
+
+.standard-table col.table-filler-col {
+    width: auto;
+}
+
+.table-responsive--scroll .standard-table {
+    min-width: max(100%, var(--table-min-scroll-width));
 }
 
 .standard-table thead {
@@ -51,6 +73,7 @@ body .standard-table th {
     display: flex;
     align-items: center;
     width: 100%;
+    position: relative;
 }
 
 .standard-table .th-label {
@@ -74,6 +97,41 @@ body .standard-table th {
     align-items: center;
     gap: 4px;
     flex-shrink: 0;
+}
+
+.column-resize-handle {
+    position: absolute;
+    top: 0;
+    right: -6px;
+    width: 12px;
+    height: 100%;
+    border: none;
+    background: transparent;
+    cursor: col-resize;
+    z-index: 12;
+    padding: 0;
+}
+
+.column-resize-handle::after {
+    content: "";
+    position: absolute;
+    top: 18%;
+    bottom: 18%;
+    right: 5px;
+    width: 1px;
+    background: rgba(var(--accent-color-rgb), 0.25);
+    transition: background-color 0.2s ease;
+}
+
+.standard-table th:hover .column-resize-handle::after,
+.column-resize-handle:focus-visible::after {
+    background: var(--accent-color);
+}
+
+body.column-resizing,
+body.column-resizing * {
+    cursor: col-resize !important;
+    user-select: none;
 }
 
 /* Column Filter Icon */
@@ -241,6 +299,93 @@ body .standard-table th {
     user-select: none;
 }
 
+.filter-dropdown.filter-dropdown-date-tree {
+    width: 320px;
+    max-height: 430px;
+    overflow: hidden;
+}
+
+.filter-options.filter-options-date-tree {
+    max-height: 330px;
+    overflow-y: auto;
+    padding: 6px 8px 10px;
+}
+
+.date-filter-group {
+    margin: 2px 0;
+}
+
+.date-filter-group > summary {
+    list-style: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+}
+
+.date-filter-group > summary::-webkit-details-marker {
+    display: none;
+}
+
+.date-filter-group > summary::before {
+    content: "▸";
+    display: inline-block;
+    width: 12px;
+    margin-right: 2px;
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    line-height: 1;
+    transform: translateY(1px);
+}
+
+.date-filter-group[open] > summary::before {
+    content: "▾";
+}
+
+.date-filter-group-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    border-radius: 6px;
+    color: var(--text-primary);
+    transition: background 0.15s ease;
+    font-size: 0.85rem;
+}
+
+.date-filter-group-option:hover {
+    background: var(--bg-tertiary);
+}
+
+.date-filter-group-option input[type="checkbox"] {
+    margin: 0;
+    width: 16px;
+    height: 16px;
+    accent-color: var(--accent-color);
+}
+
+.date-filter-children {
+    margin-left: 10px;
+    padding-left: 10px;
+    border-left: 1px dashed rgba(var(--accent-color-rgb), 0.25);
+}
+
+.date-filter-level-year {
+    font-weight: 600;
+}
+
+.date-filter-level-month {
+    font-weight: 500;
+}
+
+.date-filter-leaf-option.date-filter-level-day {
+    margin-left: 10px;
+}
+
+.date-filter-leaf-option.date-filter-level-time {
+    margin-left: 18px;
+    font-size: 0.8125rem;
+}
+
 /* Filter scrollbar styling */
 .filter-options::-webkit-scrollbar {
     width: 6px;
@@ -290,6 +435,10 @@ body .standard-table tbody tr {
     max-height: calc(50px * var(--table-zoom)) !important; /* Force maximum height */
 }
 
+body .standard-table tbody tr.row-clickable {
+    cursor: pointer;
+}
+
 body .standard-table tbody tr:hover {
     background: var(--bg-tertiary);
 }
@@ -311,16 +460,43 @@ body .standard-table td {
 
 body .standard-table .actions-header {
     text-align: center;
-    min-width: calc(120px * var(--table-zoom));
-    width: calc(120px * var(--table-zoom));
+    min-width: var(--actions-column-width);
+    width: var(--actions-column-width);
+    max-width: var(--actions-column-width);
     white-space: nowrap;
+    position: sticky;
+    right: 0;
+    z-index: 8;
+    background: var(--bg-tertiary);
+    box-shadow: -8px 0 12px -12px rgba(0, 0, 0, 0.45);
+}
+
+body .standard-table .actions-header .actions-header-content {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
 }
 
 body .standard-table .actions-column {
     text-align: center;
-    min-width: calc(120px * var(--table-zoom));
-    width: calc(120px * var(--table-zoom));
+    min-width: var(--actions-column-width);
+    width: var(--actions-column-width);
+    max-width: var(--actions-column-width);
     white-space: nowrap;
     padding: calc(10px * var(--table-zoom)) calc(8px * var(--table-zoom)) !important;
+    position: sticky;
+    right: 0;
+    z-index: 6;
+    background: var(--bg-secondary);
+    box-shadow: -8px 0 12px -12px rgba(0, 0, 0, 0.45);
+}
+
+body .standard-table .table-filler-header,
+body .standard-table .table-filler-cell {
+    width: auto;
+    min-width: 0;
+    padding: 0 !important;
+    background: transparent;
 }
 

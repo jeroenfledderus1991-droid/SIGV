@@ -114,6 +114,21 @@ This file captures the local rules and patterns for this template. Keep changes 
 4) Data table
    - Use `ClientTable` with actions wired to window handlers (see `client/src/pages/Stamgegevens.jsx`).
 
+## ClientTable settings intake (verplicht)
+- Bij elke **nieuwe** tabel (`ClientTable`) moet de agent **altijd eerst** de instelbare tabelsettings uitvragen en bevestigen vóór implementatie.
+- Minimale vragenlijst per tabel:
+  - Rijgedrag: `enableRowClickAction`, `rowClickActionType`
+  - Scrollgedrag: `horizontalScroll` (`auto|on|off`)
+  - Actiekolom: `actions` aanwezig ja/nee, `actionsColumnWidth`, sticky rechts bevestigen
+  - Kolommen: `enableColumnResize`, `enableColumnCustomization`, volgorde/verbergen toegestaan ja/nee
+  - Filters/export: `enableColumnFilters`, `searchEnabled`, `exportEnabled`
+  - Paginering: standaard `rowsPerPage`, toegestane `rowsOptions`, `Alle` toegestaan ja/nee
+  - Default breedtes: per kolom `width`, `minWidth`, eventueel `widthWeight`
+  - Persistente voorkeuren: wel/niet opslaan per user/device
+- Als de gebruiker niet alle keuzes aanlevert:
+  - Eerst gericht navragen.
+  - Daarna pas bouwen met expliciet vastgelegde defaults.
+
 ## Database notes
 - Views live in `sql/views/`. Tables live in `sql/tables/`.
 - Use `sql/database_setup.py views` for view updates.
