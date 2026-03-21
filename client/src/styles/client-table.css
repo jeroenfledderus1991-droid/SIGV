@@ -1,6 +1,7 @@
 /* ClientTable styles import hub (semantic split). */
 @import "./client-table/core-layout.css";
 @import "./client-table/table-and-filters.css";
+@import "./client-table/filter-date-tree.css";
 @import "./client-table/status-and-actions.css";
 @import "./client-table/pagination-and-responsive.css";
 @import "./client-table/states-modal-dnd-print.css";
