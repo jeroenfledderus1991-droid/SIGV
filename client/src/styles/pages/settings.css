@@ -113,6 +113,74 @@
     font-size: 0.8rem;
 }
 
+.settings-page .table-tint-grid {
+    grid-template-columns: repeat(auto-fit, minmax(115px, 1fr));
+    gap: 10px;
+}
+
+.settings-page .table-tint-option {
+    align-items: flex-start;
+    gap: 8px;
+}
+
+.settings-page .table-tint-swatch {
+    width: 100%;
+    height: 18px;
+    border-radius: 999px;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.settings-page .option-card.table-tint-option.active .table-tint-swatch {
+    border-color: rgba(255, 255, 255, 0.65);
+}
+
+.settings-page .table-tint-custom {
+    margin-top: 12px;
+    padding: 10px;
+    border: 1px dashed var(--border-color);
+    border-radius: 8px;
+    background: color-mix(in srgb, var(--bg-secondary) 88%, var(--bg-primary));
+}
+
+.settings-page .table-tint-custom.active {
+    border-color: color-mix(in srgb, var(--accent-color) 45%, var(--border-color));
+    background: color-mix(in srgb, var(--accent-color) 8%, var(--bg-secondary));
+}
+
+.settings-page .table-tint-custom-label {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 8px;
+}
+
+.settings-page .table-tint-custom-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.settings-page .table-tint-custom-picker {
+    width: 40px;
+    height: 34px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 0;
+    cursor: pointer;
+    background: transparent;
+}
+
+.settings-page .table-tint-custom-input {
+    min-width: 110px;
+    padding: 6px 8px;
+    font-size: 0.8rem;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+}
+
 .settings-page .theme-demo,
 .settings-page .display-demo {
     margin-top: 8px;

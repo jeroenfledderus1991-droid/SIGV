@@ -16,6 +16,8 @@ CREATE TABLE dbo.tbl_user_settings (
     accent_text_color NVARCHAR(7) NULL,       -- Hex (#RRGGBB) voor tekst op accent vlakken
     sidebar_variant NVARCHAR(30) NULL,        -- 'accent-gradient' | 'accent-solid' | 'white'
     gradient_intensity INT DEFAULT 30,        -- Gradient intensiteit percentage (0-100)
+    table_tint NVARCHAR(30) DEFAULT 'mint',   -- Zachte tabelkleur preset voor ClientTable
+    container_tint NVARCHAR(30) DEFAULT 'mint', -- Zachte containerkleur preset voor cards/panels
     created_at DATETIME2 NOT NULL DEFAULT SYSDATETIME(),
     updated_at DATETIME2 NOT NULL DEFAULT SYSDATETIME()
 );
@@ -40,12 +42,24 @@ GO
 IF OBJECT_ID('dbo.tbl_user_settings','U') IS NOT NULL AND COL_LENGTH('dbo.tbl_user_settings','gradient_intensity') IS NULL
     ALTER TABLE dbo.tbl_user_settings ADD gradient_intensity INT NULL;
 GO
+IF OBJECT_ID('dbo.tbl_user_settings','U') IS NOT NULL AND COL_LENGTH('dbo.tbl_user_settings','table_tint') IS NULL
+    ALTER TABLE dbo.tbl_user_settings ADD table_tint NVARCHAR(30) NULL;
+GO
+IF OBJECT_ID('dbo.tbl_user_settings','U') IS NOT NULL AND COL_LENGTH('dbo.tbl_user_settings','container_tint') IS NULL
+    ALTER TABLE dbo.tbl_user_settings ADD container_tint NVARCHAR(30) NULL;
+GO
 -- Default vullen voor bestaande records
 IF OBJECT_ID('dbo.tbl_user_settings','U') IS NOT NULL
     UPDATE dbo.tbl_user_settings SET sidebar_variant = 'accent-gradient' WHERE sidebar_variant IS NULL;
 GO
 IF OBJECT_ID('dbo.tbl_user_settings','U') IS NOT NULL
     UPDATE dbo.tbl_user_settings SET gradient_intensity = 30 WHERE gradient_intensity IS NULL;
+GO
+IF OBJECT_ID('dbo.tbl_user_settings','U') IS NOT NULL
+    UPDATE dbo.tbl_user_settings SET table_tint = 'mint' WHERE table_tint IS NULL;
+GO
+IF OBJECT_ID('dbo.tbl_user_settings','U') IS NOT NULL
+    UPDATE dbo.tbl_user_settings SET container_tint = 'mint' WHERE container_tint IS NULL;
 GO
 
 -- Trigger om updated_at bij te werken (alleen aanmaken als nog niet bestaat)

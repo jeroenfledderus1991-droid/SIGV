@@ -4,8 +4,8 @@
 
 .table-footer {
     padding: 12px 20px;
-    border-top: 1px solid var(--border-color);
-    background: var(--bg-tertiary);
+    border-top: 1px solid var(--table-border-tint);
+    background: var(--table-header-bg);
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -20,8 +20,8 @@
 .table-pagination {
     /* Deprecated - gebruik table-footer */
     padding: 16px 20px;
-    border-top: 1px solid var(--border-color);
-    background: var(--bg-tertiary);
+    border-top: 1px solid var(--table-border-tint);
+    background: var(--table-header-bg);
 }
 
 .pagination-controls {

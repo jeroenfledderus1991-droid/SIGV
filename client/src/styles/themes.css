@@ -5,8 +5,11 @@
 :root {
     /* Light Theme (default) */
     --bg-primary: #f8f9fa;
-    --bg-secondary: #ffffff;
-    --bg-tertiary: #f1f3f4;
+    --container-tint-rgb: 223, 227, 234;
+    --bg-secondary-base: #ffffff;
+    --bg-tertiary-base: #f1f3f4;
+    --bg-secondary: color-mix(in srgb, rgb(var(--container-tint-rgb)) 20%, var(--bg-secondary-base));
+    --bg-tertiary: color-mix(in srgb, rgb(var(--container-tint-rgb)) 28%, var(--bg-tertiary-base));
     --text-primary: #181c22; /* Zeer donker voor maximale leesbaarheid */
     --text-secondary: #3d4852; /* Donkergrijs, goed leesbaar op licht */
     --text-muted: #6c757d; /* Iets donkerder dan standaard muted */
@@ -16,6 +19,10 @@
     --accent-color-rgb: 44, 95, 65;
     --accent-hover: #1a3c28;
     --accent-text-color: #ffffff;
+    --table-tint-rgb: 223, 227, 234;
+    --container-bg: color-mix(in srgb, rgb(var(--container-tint-rgb)) 22%, var(--bg-secondary));
+    --container-bg-hover: color-mix(in srgb, rgb(var(--container-tint-rgb)) 34%, var(--bg-secondary));
+    --container-border-color: color-mix(in srgb, rgb(var(--container-tint-rgb)) 52%, var(--border-color));
     --success-color: #198754;
     --warning-color: #fd7e14;
     --danger-color: #dc3545;
@@ -42,8 +49,10 @@
 /* Donker thema: identiek aan auto-dark voor volledige consistentie */
 [data-theme="dark"], .theme-dark {
     --bg-primary: color-mix(in srgb, #0e1112 90%, var(--accent-color));
-    --bg-secondary: color-mix(in srgb, #1a1f22 88%, var(--accent-color));
-    --bg-tertiary: color-mix(in srgb, #262c31 86%, var(--accent-color));
+    --bg-secondary-base: color-mix(in srgb, #1a1f22 88%, var(--accent-color));
+    --bg-tertiary-base: color-mix(in srgb, #262c31 86%, var(--accent-color));
+    --bg-secondary: color-mix(in srgb, rgb(var(--container-tint-rgb)) 14%, var(--bg-secondary-base));
+    --bg-tertiary: color-mix(in srgb, rgb(var(--container-tint-rgb)) 22%, var(--bg-tertiary-base));
     --text-primary: #f8f9fa;
     --text-secondary: #ced4da;
     --text-muted: #7b8791;
@@ -73,8 +82,10 @@
 @media (prefers-color-scheme: dark) {
     [data-theme="auto"] {
         --bg-primary: color-mix(in srgb, #0e1112 90%, var(--accent-color));
-        --bg-secondary: color-mix(in srgb, #1a1f22 88%, var(--accent-color));
-        --bg-tertiary: color-mix(in srgb, #262c31 86%, var(--accent-color));
+        --bg-secondary-base: color-mix(in srgb, #1a1f22 88%, var(--accent-color));
+        --bg-tertiary-base: color-mix(in srgb, #262c31 86%, var(--accent-color));
+        --bg-secondary: color-mix(in srgb, rgb(var(--container-tint-rgb)) 14%, var(--bg-secondary-base));
+        --bg-tertiary: color-mix(in srgb, rgb(var(--container-tint-rgb)) 22%, var(--bg-tertiary-base));
         --text-primary: #f8f9fa;
         --text-secondary: #ced4da;
         --text-muted: #7b8791;
@@ -151,13 +162,14 @@ a:hover {
 
 /* Cards en containers */
 .card, .settings-card, .content-card {
-    background-color: var(--bg-secondary);
-    border: 1px solid var(--border-color);
+    background-color: var(--container-bg);
+    border: 1px solid var(--container-border-color);
     box-shadow: var(--shadow-sm);
     transition: background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
 .card:hover, .settings-card:hover {
+    background-color: var(--container-bg-hover);
     box-shadow: var(--shadow-md);
 }
 
@@ -244,8 +256,8 @@ a:hover {
 
 /* Modals met thema ondersteuning */
 .modal-content {
-    background-color: var(--bg-secondary);
-    border-color: var(--border-color);
+    background-color: var(--container-bg);
+    border-color: var(--container-border-color);
     color: var(--text-primary);
 }
 

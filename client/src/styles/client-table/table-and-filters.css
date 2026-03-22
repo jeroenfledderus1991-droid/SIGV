@@ -37,8 +37,8 @@
 }
 
 .standard-table thead {
-    background: var(--bg-tertiary);
-    border-bottom: 2px solid var(--border-color);
+    background: var(--table-header-bg);
+    border-bottom: 2px solid var(--table-border-tint);
 }
 
 body .standard-table th {
@@ -65,7 +65,7 @@ body .standard-table th {
 }
 
 .standard-table th.sortable:hover {
-    background: var(--bg-secondary);
+    background: var(--table-row-hover-bg);
     color: var(--accent-color);
 }
 
@@ -342,10 +342,11 @@ body.column-resizing * {
 }
 
 body .standard-table tbody tr {
-    border-bottom: 1px solid var(--border-color);
+    border-bottom: 1px solid var(--table-border-tint);
     transition: background-color 0.15s ease;
     height: calc(50px * var(--table-zoom)) !important;
     max-height: calc(50px * var(--table-zoom)) !important; /* Force maximum height */
+    background: var(--table-row-bg);
 }
 
 body .standard-table tbody tr.row-clickable {
@@ -353,7 +354,7 @@ body .standard-table tbody tr.row-clickable {
 }
 
 body .standard-table tbody tr:hover {
-    background: var(--bg-tertiary);
+    background: var(--table-row-hover-bg);
 }
 
 body .standard-table tbody tr:last-child {
@@ -380,7 +381,7 @@ body .standard-table .actions-header {
     position: sticky;
     right: 0;
     z-index: 8;
-    background: var(--bg-tertiary);
+    background: var(--table-header-bg);
     box-shadow: -8px 0 12px -12px rgba(0, 0, 0, 0.45);
 }
 
@@ -401,8 +402,12 @@ body .standard-table .actions-column {
     position: sticky;
     right: 0;
     z-index: 6;
-    background: var(--bg-secondary);
+    background: var(--table-row-bg);
     box-shadow: -8px 0 12px -12px rgba(0, 0, 0, 0.45);
+}
+
+body .standard-table tbody tr:hover .actions-column {
+    background: var(--table-row-hover-bg);
 }
 
 body .standard-table .table-filler-header,

@@ -24,6 +24,8 @@ function registerAuthRoutes({
   loadPermissions,
   fetchUserSettings,
   DEFAULT_SETTINGS,
+  normalizeTableTint,
+  normalizeContainerTint,
 }) {
   function requireLocalAuthEnabled(req, res, next) {
     if (!hasLocalAuth) {
@@ -242,6 +244,11 @@ function registerAuthRoutes({
           gradientIntensity: Number.isFinite(settings.gradient_intensity)
             ? settings.gradient_intensity
             : DEFAULT_SETTINGS.gradient_intensity,
+          tableTint: normalizeTableTint(settings.table_tint, DEFAULT_SETTINGS.table_tint),
+          containerTint: normalizeContainerTint(
+            settings.container_tint,
+            DEFAULT_SETTINGS.container_tint
+          ),
         };
       } catch (error) {
         themeSettings = null;

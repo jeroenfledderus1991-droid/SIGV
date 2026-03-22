@@ -1,6 +1,14 @@
 import { useCallback, useEffect, useState } from "react";
 import { getJson, postJson } from "../api";
-import { getBootstrap, loadBootstrap } from "../bootstrap";
+import { getBootstrap, loadBootstrap, setBootstrap } from "../bootstrap";
+import {
+  DEFAULT_CONTAINER_TINT,
+  DEFAULT_TABLE_TINT,
+  getContainerTintRgb,
+  getTableTintRgb,
+  normalizeContainerTint,
+  normalizeTableTint,
+} from "../tableTintPresets";
 
 const DEFAULT_SETTINGS = {
   theme: "light",
@@ -8,6 +16,8 @@ const DEFAULT_SETTINGS = {
   accentTextColor: "#ffffff",
   sidebarVariant: "accent-gradient",
   gradientIntensity: 30,
+  tableTint: DEFAULT_TABLE_TINT,
+  containerTint: DEFAULT_CONTAINER_TINT,
 };
 const STORAGE_KEY = "themeSettings";
 
@@ -45,6 +55,8 @@ function normalizeSettings(input) {
   const gradientIntensity = Number.isFinite(Number(input.gradientIntensity))
     ? clamp(Number(input.gradientIntensity), 0, 100)
     : DEFAULT_SETTINGS.gradientIntensity;
+  const tableTint = normalizeTableTint(input.tableTint ?? input.table_tint);
+  const containerTint = normalizeContainerTint(input.containerTint ?? input.container_tint);
   return {
     ...DEFAULT_SETTINGS,
     theme,
@@ -52,6 +64,8 @@ function normalizeSettings(input) {
     accentTextColor,
     sidebarVariant,
     gradientIntensity,
+    tableTint,
+    containerTint,
   };
 }
 
@@ -84,9 +98,29 @@ function applyThemeSettings(settings) {
   root.style.setProperty("--accent-color-rgb", hexToRgb(settings.accentColor).join(","));
   root.style.setProperty("--accent-hover", `${settings.accentColor}E6`);
   root.style.setProperty("--sidebar-accent-second", mixWithBlack(settings.accentColor, settings.gradientIntensity));
+  root.style.setProperty("--table-tint-rgb", getTableTintRgb(settings.tableTint));
+  root.style.setProperty("--container-tint-rgb", getContainerTintRgb(settings.containerTint));
 
   body.classList.remove("theme-light", "theme-dark", "theme-auto");
   body.classList.add(`theme-${settings.theme}`);
+}
+
+function syncBootstrapThemeSettings(settings) {
+  const bootstrap = getBootstrap();
+  if (!bootstrap || typeof bootstrap !== "object") return;
+  setBootstrap({
+    ...bootstrap,
+    themeSettings: {
+      ...(bootstrap.themeSettings || {}),
+      theme: settings.theme,
+      accentColor: settings.accentColor,
+      accentTextColor: settings.accentTextColor,
+      sidebarVariant: settings.sidebarVariant,
+      gradientIntensity: settings.gradientIntensity,
+      tableTint: settings.tableTint,
+      containerTint: settings.containerTint,
+    },
+  });
 }
 
 export default function useThemeSettings(enabled = true) {
@@ -120,15 +154,19 @@ export default function useThemeSettings(enabled = true) {
             gradientIntensity: Number.isFinite(data.gradient_intensity)
               ? data.gradient_intensity
               : DEFAULT_SETTINGS.gradientIntensity,
+            tableTint: data.table_tint || data.tableTint || DEFAULT_SETTINGS.tableTint,
+            containerTint: data.container_tint || data.containerTint || DEFAULT_SETTINGS.containerTint,
           };
           setSettings(merged);
           applyThemeSettings(merged);
           storeSettings(merged);
+          syncBootstrapThemeSettings(merged);
         })
         .catch(() => {
           if (!stored) {
             applyThemeSettings(DEFAULT_SETTINGS);
             setSettings(DEFAULT_SETTINGS);
+            syncBootstrapThemeSettings(DEFAULT_SETTINGS);
           }
         })
         .finally(() => setLoading(false));
@@ -143,12 +181,15 @@ export default function useThemeSettings(enabled = true) {
     if (initialBootstrapSettings) {
       applyThemeSettings(initialBootstrapSettings);
       storeSettings(initialBootstrapSettings);
+      syncBootstrapThemeSettings(initialBootstrapSettings);
       updateLocalState(initialBootstrapSettings, false);
     } else if (stored) {
       applyThemeSettings(stored);
+      syncBootstrapThemeSettings(stored);
       updateLocalState(stored, false);
     } else {
       applyThemeSettings(DEFAULT_SETTINGS);
+      syncBootstrapThemeSettings(DEFAULT_SETTINGS);
       updateLocalState(null, true);
     }
 
@@ -160,6 +201,7 @@ export default function useThemeSettings(enabled = true) {
           setSettings(fromBootstrap);
           applyThemeSettings(fromBootstrap);
           storeSettings(fromBootstrap);
+          syncBootstrapThemeSettings(fromBootstrap);
           setLoading(false);
           return;
         }
@@ -185,7 +227,10 @@ export default function useThemeSettings(enabled = true) {
         accent_text_color: merged.accentTextColor,
         sidebar_variant: merged.sidebarVariant,
         gradient_intensity: merged.gradientIntensity,
+        table_tint: merged.tableTint,
+        container_tint: merged.containerTint,
       }).catch(() => null);
+      syncBootstrapThemeSettings(merged);
       return merged;
     });
   }, []);

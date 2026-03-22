@@ -23,7 +23,15 @@ const { buildCspHeader } = require("./security/csp");
 const { registerCsrfProtection } = require("./security/csrfMiddleware");
 const { runStartupChecks } = require("./security/startupChecks");
 const { createBootstrapService } = require("./services/bootstrapService");
-const { clamp, normalizeHex, mixWithBlack } = require("./utils/themeUtils");
+const {
+  clamp,
+  normalizeHex,
+  mixWithBlack,
+  normalizeTableTint,
+  normalizeContainerTint,
+  getTableTintRgb,
+  getContainerTintRgb,
+} = require("./utils/themeUtils");
 const { buildBootstrapMarkup } = require("./utils/bootstrapMarkup");
 const { createViteProxyHelpers } = require("./utils/viteProxy");
 
@@ -55,6 +63,8 @@ const DEFAULT_SETTINGS = {
   accent_text_color: "#ffffff",
   sidebar_variant: "accent-gradient",
   gradient_intensity: 30,
+  table_tint: "mint",
+  container_tint: "mint",
 };
 const SIDEBAR_HEADER_WHITE_FLAG = "ENABLE_SIDEBAR_HEADER_WHITE";
 const SUPER_ADMIN_ROLE_NAME = "Super Admin";
@@ -199,6 +209,8 @@ const {
   hasMicrosoftAuth,
   sidebarHeaderWhiteFlag: SIDEBAR_HEADER_WHITE_FLAG,
   loadPermissions,
+  normalizeTableTint,
+  normalizeContainerTint,
 });
 
 registerSystemRoutes({
@@ -214,6 +226,8 @@ registerSystemRoutes({
   hasMicrosoftAuth,
   fetchUserSettings,
   DEFAULT_SETTINGS,
+  normalizeTableTint,
+  normalizeContainerTint,
 });
 
 registerAuthRoutes({
@@ -242,6 +256,8 @@ registerAuthRoutes({
   loadPermissions,
   fetchUserSettings,
   DEFAULT_SETTINGS,
+  normalizeTableTint,
+  normalizeContainerTint,
 });
 
 registerRoleRoutes({
@@ -302,6 +318,10 @@ registerClientShellRoutes({
   normalizeHex,
   clamp,
   mixWithBlack,
+  normalizeTableTint,
+  normalizeContainerTint,
+  getTableTintRgb,
+  getContainerTintRgb,
 });
 
 app.use((req, res) => {

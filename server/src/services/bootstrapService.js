@@ -11,7 +11,61 @@ function createBootstrapService({
   hasMicrosoftAuth,
   sidebarHeaderWhiteFlag,
   loadPermissions,
+  normalizeTableTint,
+  normalizeContainerTint,
 }) {
+  async function getUserSettingsOptionalColumns(pool) {
+    const result = await pool.request().query(`
+      SELECT
+        CASE WHEN COL_LENGTH('dbo.tbl_user_settings', 'table_tint') IS NULL THEN 0 ELSE 1 END AS has_table_tint,
+        CASE WHEN COL_LENGTH('dbo.tbl_user_settings', 'container_tint') IS NULL THEN 0 ELSE 1 END AS has_container_tint
+    `);
+    return {
+      hasTableTint: Boolean(result.recordset[0]?.has_table_tint),
+      hasContainerTint: Boolean(result.recordset[0]?.has_container_tint),
+    };
+  }
+
+  async function readUserSettingsRow(pool, userId) {
+    const { hasTableTint, hasContainerTint } = await getUserSettingsOptionalColumns(pool);
+    const request = pool.request();
+    request.input("user_id", userId);
+    let result;
+    if (hasTableTint && hasContainerTint) {
+      result = await request.query(`
+        SELECT theme, display_mode, accent_color, accent_text_color, sidebar_variant, gradient_intensity, table_tint, container_tint
+        FROM dbo.tbl_user_settings
+        WHERE user_id = @user_id
+      `);
+    } else if (hasTableTint) {
+      result = await request.query(`
+        SELECT theme, display_mode, accent_color, accent_text_color, sidebar_variant, gradient_intensity, table_tint
+        FROM dbo.tbl_user_settings
+        WHERE user_id = @user_id
+      `);
+    } else if (hasContainerTint) {
+      result = await request.query(`
+        SELECT theme, display_mode, accent_color, accent_text_color, sidebar_variant, gradient_intensity, container_tint
+        FROM dbo.tbl_user_settings
+        WHERE user_id = @user_id
+      `);
+    } else {
+      result = await request.query(`
+        SELECT theme, display_mode, accent_color, accent_text_color, sidebar_variant, gradient_intensity
+        FROM dbo.tbl_user_settings
+        WHERE user_id = @user_id
+      `);
+    }
+    const row = result.recordset[0] || {};
+    if (!hasTableTint) {
+      row.table_tint = defaultSettings.table_tint;
+    }
+    if (!hasContainerTint) {
+      row.container_tint = defaultSettings.container_tint;
+    }
+    return row;
+  }
+
   async function loadFeatureFlags(flagNames) {
     if (!flagNames?.length || !config.db.server) return {};
     const pool = await db.getPool();
@@ -101,12 +155,13 @@ function createBootstrapService({
 
   async function fetchUserSettings(userId) {
     const pool = await db.getPool();
-    const request = pool.request();
-    request.input("user_id", userId);
-    const result = await request.query(
-      "SELECT theme, display_mode, accent_color, accent_text_color, sidebar_variant, gradient_intensity FROM dbo.tbl_user_settings WHERE user_id = @user_id"
-    );
-    return { ...defaultSettings, ...(result.recordset[0] || {}) };
+    const row = await readUserSettingsRow(pool, userId);
+    return {
+      ...defaultSettings,
+      ...row,
+      table_tint: normalizeTableTint(row.table_tint, defaultSettings.table_tint),
+      container_tint: normalizeContainerTint(row.container_tint, defaultSettings.container_tint),
+    };
   }
 
   async function buildBootstrap(req, res) {
@@ -124,6 +179,8 @@ function createBootstrapService({
       accentTextColor: defaultSettings.accent_text_color,
       sidebarVariant: defaultSettings.sidebar_variant,
       gradientIntensity: defaultSettings.gradient_intensity,
+      tableTint: defaultSettings.table_tint,
+      containerTint: defaultSettings.container_tint,
     };
 
     const bootstrap = {
@@ -173,6 +230,8 @@ function createBootstrapService({
         gradientIntensity: Number.isFinite(settings.gradient_intensity)
           ? settings.gradient_intensity
           : defaultSettings.gradient_intensity,
+        tableTint: normalizeTableTint(settings.table_tint, defaultSettings.table_tint),
+        containerTint: normalizeContainerTint(settings.container_tint, defaultSettings.container_tint),
       };
 
       return bootstrap;

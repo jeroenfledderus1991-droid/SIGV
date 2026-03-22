@@ -15,6 +15,10 @@ function registerClientShellRoutes({
   normalizeHex,
   clamp,
   mixWithBlack,
+  normalizeTableTint,
+  normalizeContainerTint,
+  getTableTintRgb,
+  getContainerTintRgb,
 }) {
   if (fs.existsSync(clientDistDir)) {
     app.use(express.static(clientDistDir));
@@ -51,6 +55,10 @@ function registerClientShellRoutes({
         normalizeHex,
         clamp,
         mixWithBlack,
+        normalizeTableTint,
+        normalizeContainerTint,
+        getTableTintRgb,
+        getContainerTintRgb,
       });
       const html = template
         .replace("<!-- APP_BOOTSTRAP -->", markup)

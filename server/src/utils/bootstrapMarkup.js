@@ -4,7 +4,20 @@ function hexToRgb(hex) {
   return [0, 2, 4].map((offset) => parseInt(clean.slice(offset, offset + 2), 16));
 }
 
-function buildBootstrapMarkup(bootstrap, nonce, { defaultSettings, normalizeHex, clamp, mixWithBlack }) {
+function buildBootstrapMarkup(
+  bootstrap,
+  nonce,
+  {
+    defaultSettings,
+    normalizeHex,
+    clamp,
+    mixWithBlack,
+    normalizeTableTint,
+    normalizeContainerTint,
+    getTableTintRgb,
+    getContainerTintRgb,
+  }
+) {
   const nonceAttr = nonce ? ` nonce="${nonce}"` : "";
   const theme = bootstrap?.themeSettings?.theme || defaultSettings.theme;
   const accentColor = normalizeHex(
@@ -20,6 +33,16 @@ function buildBootstrapMarkup(bootstrap, nonce, { defaultSettings, normalizeHex,
     : defaultSettings.gradient_intensity;
   const accentRgb = hexToRgb(accentColor);
   const sidebarAccentSecond = mixWithBlack(accentColor, gradientIntensity);
+  const tableTint = normalizeTableTint(
+    bootstrap?.themeSettings?.tableTint,
+    defaultSettings.table_tint
+  );
+  const tableTintRgb = getTableTintRgb(tableTint, defaultSettings.table_tint);
+  const containerTint = normalizeContainerTint(
+    bootstrap?.themeSettings?.containerTint,
+    defaultSettings.container_tint
+  );
+  const containerTintRgb = getContainerTintRgb(containerTint, defaultSettings.container_tint);
   const bootstrapJson = JSON.stringify(bootstrap).replace(/</g, "\\u003c");
   const themeJson = JSON.stringify(theme);
 
@@ -31,6 +54,8 @@ function buildBootstrapMarkup(bootstrap, nonce, { defaultSettings, normalizeHex,
         --accent-hover: ${accentColor}E6;
         --accent-text-color: ${accentTextColor};
         --sidebar-accent-second: ${sidebarAccentSecond};
+        --table-tint-rgb: ${tableTintRgb};
+        --container-tint-rgb: ${containerTintRgb};
       }
     </style>
     <script${nonceAttr}>

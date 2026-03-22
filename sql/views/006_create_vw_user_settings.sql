@@ -21,6 +21,8 @@ SELECT
     us.accent_text_color,
     us.sidebar_variant,
     us.gradient_intensity,
+    us.table_tint,
+    us.container_tint,
     
     -- Timestamps
     us.created_at,
@@ -53,7 +55,41 @@ SELECT
     END AS display_mode_label,
 
     -- Gradient intensity percentage
-    CAST(us.gradient_intensity AS NVARCHAR(10)) + '%' AS gradient_intensity_display
+    CAST(us.gradient_intensity AS NVARCHAR(10)) + '%' AS gradient_intensity_display,
+
+    -- Table tint label
+    CASE us.table_tint
+        WHEN 'neutral' THEN 'Neutraal'
+        WHEN 'mint' THEN 'Mint'
+        WHEN 'sky' THEN 'Luchtblauw'
+        WHEN 'sand' THEN 'Zand'
+        WHEN 'peach' THEN 'Perzik'
+        WHEN 'lavender' THEN 'Lavendel'
+        WHEN 'rose' THEN 'Roze'
+        WHEN 'aqua' THEN 'Aqua'
+        WHEN 'lime' THEN 'Limoen'
+        WHEN 'sunset' THEN 'Sunset'
+        WHEN 'coral' THEN 'Koraal'
+        WHEN 'canary' THEN 'Geel'
+        ELSE 'Aangepast'
+    END AS table_tint_label,
+
+    -- Container tint label
+    CASE us.container_tint
+        WHEN 'neutral' THEN 'Neutraal'
+        WHEN 'mint' THEN 'Mint'
+        WHEN 'sky' THEN 'Luchtblauw'
+        WHEN 'sand' THEN 'Zand'
+        WHEN 'peach' THEN 'Perzik'
+        WHEN 'lavender' THEN 'Lavendel'
+        WHEN 'rose' THEN 'Roze'
+        WHEN 'aqua' THEN 'Aqua'
+        WHEN 'lime' THEN 'Limoen'
+        WHEN 'sunset' THEN 'Sunset'
+        WHEN 'coral' THEN 'Koraal'
+        WHEN 'canary' THEN 'Geel'
+        ELSE 'Aangepast'
+    END AS container_tint_label
 
 FROM dbo.tbl_user_settings us;
 GO
