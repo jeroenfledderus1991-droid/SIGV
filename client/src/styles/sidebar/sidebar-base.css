@@ -16,8 +16,7 @@
   position: fixed;
   inset: 0 auto 0 0;
   height: 100vh;
-  overflow-y: auto;
-  overflow-x: hidden;
+  overflow: visible;
   transition: width 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   z-index: 1000;
   box-shadow: var(--shadow-md);
@@ -26,17 +25,13 @@
   font-family: 'Inter','Segoe UI',Arial,sans-serif;
   font-size: clamp(12px, 0.85vw, 13px);
   letter-spacing: 0.01em;
-  scrollbar-width: thin;
-  scrollbar-color: var(--sidebar-hover) transparent;
   will-change: width;
 }
-.sidebar::-webkit-scrollbar { width: 8px; }
-.sidebar::-webkit-scrollbar-thumb { background: var(--sidebar-hover); border-radius: 8px; }
 
 /* ===== COLLAPSED STATE ===== */
 .sidebar.collapsed {
   width: 70px;
-  overflow: hidden;
+  overflow: visible;
 }
 
 /* Text hiding strategy: avoid layout thrash & flicker */

@@ -16,16 +16,9 @@ import useAppSettings from "./hooks/useAppSettings.js";
 import useAuth from "./hooks/useAuth.js";
 import usePermissions from "./hooks/usePermissions.js";
 import { loadBootstrap } from "./bootstrap.js";
+import { isRouteMatch, SIDEBAR_ENTRIES } from "./config/sidebarConfig.js";
 
 const SIDEBAR_KEY = "sidebarCollapsed";
-
-const navItems = [
-  { to: "/", label: "Home", icon: "fa-home", end: true, permissions: ["/home*"] },
-  { to: "/accounts", label: "Accountbeheer", icon: "fa-users-cog", permissions: ["/accounts*"] },
-  { to: "/rollen", label: "Rolbeheer", icon: "fa-user-shield", permissions: ["/rollen*"] },
-  { to: "/stamgegevens", label: "Stamgegevens", icon: "fa-database", permissions: ["/stamgegevens*"] },
-  { to: "/feature-flags", label: "Feature flags", icon: "fa-flag", permissions: ["/feature-flags*"] },
-];
 
 function MicrosoftAuthBridge() {
   const location = useLocation();
@@ -50,6 +43,7 @@ function MicrosoftAuthBridge() {
 function App() {
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem(SIDEBAR_KEY) === "1");
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [openGroupKey, setOpenGroupKey] = useState(null);
   const [profileMenuPath, setProfileMenuPath] = useState(null);
   const [authRouteUser, setAuthRouteUser] = useState(null);
   const profileBtnRef = useRef(null);
@@ -111,19 +105,33 @@ function App() {
     };
   }, [effectiveAllowedPaths]);
 
-  const filteredNavItems = useMemo(() => {
-    return navItems.filter((item) => {
-      if (!enableUserSettings && item.to === "/settings") return false;
-      return isAllowedPath(item.to);
-    });
+  const filteredSidebarEntries = useMemo(() => {
+    return SIDEBAR_ENTRIES
+      .map((entry) => {
+        if (entry.type === "group") {
+          const filteredItems = entry.items.filter((item) => isAllowedPath(item.to));
+          return filteredItems.length > 0 ? { ...entry, items: filteredItems } : null;
+        }
+        if (entry.type === "link") {
+          if (!enableUserSettings && entry.to === "/settings") return null;
+          return isAllowedPath(entry.to) ? entry : null;
+        }
+        return null;
+      })
+      .filter(Boolean);
   }, [enableUserSettings, isAllowedPath]);
+
+  const filteredNavItems = useMemo(() => {
+    return filteredSidebarEntries.flatMap((entry) => {
+      if (entry.type === "group") return entry.items;
+      return [entry];
+    });
+  }, [filteredSidebarEntries]);
 
   const firstAllowedPath = filteredNavItems[0]?.to || "/";
 
   const pageMeta = useMemo(() => {
-    const match = filteredNavItems.find((item) =>
-      item.end ? location.pathname === item.to : location.pathname.startsWith(item.to)
-    );
+    const match = filteredNavItems.find((item) => isRouteMatch(item, location.pathname));
     if (!match && location.pathname.startsWith("/profiel")) {
       return {
         title: "Profiel",
@@ -185,15 +193,19 @@ function App() {
 
   const toggleSidebar = () => {
     const next = !collapsed;
+    setOpenGroupKey(null);
     setCollapsed(next);
     localStorage.setItem(SIDEBAR_KEY, next ? "1" : "0");
+  };
+
+  const handleGroupTriggerClick = (groupKey) => {
+    setOpenGroupKey((previous) => (previous === groupKey ? null : groupKey));
   };
 
   const sidebarHeaderClass = appSettings.featureFlags?.sidebarHeaderWhite ? "header-white" : "header-theme";
   const sidebarClass = `sidebar ${collapsed ? "collapsed" : ""} ${
     mobileOpen ? "mobile-open" : ""
   } variant-${settings.sidebarVariant} ${sidebarHeaderClass}`;
-
   const appLoading =
     !isAuthRoute &&
     (!authReady ||
@@ -219,7 +231,6 @@ function App() {
       return <Navigate to={firstAllowedPath} replace />;
     }
   }
-
   if (isAuthRoute) {
     return (
       <div className="auth-layout">
@@ -266,22 +277,70 @@ function App() {
         </div>
         <div className="sidebar-menu">
           <ul className="menu-list">
-            {filteredNavItems.map((item) => (
-              <li key={item.to} className="menu-item">
-                <NavLink
-                  to={item.to}
-                  end={item.end}
-                  className={({ isActive }) => (isActive ? "menu-link active" : "menu-link")}
-                  data-tooltip={item.label}
-                  title={collapsed ? item.label : undefined}
-                  aria-label={item.label}
-                  onClick={() => setMobileOpen(false)}
-                >
-                  <i className={`fas ${item.icon}`} />
-                  <span className="menu-text">{item.label}</span>
-                </NavLink>
-              </li>
-            ))}
+            {filteredSidebarEntries.map((entry) => {
+              if (entry.type === "group") {
+                const groupIsActive = entry.items.some((item) => isRouteMatch(item, location.pathname));
+                return (
+                  <li
+                    key={entry.key}
+                    className={`menu-item menu-item-group ${openGroupKey === entry.key ? "menu-item-group-open" : ""}`}
+                    onMouseEnter={() => setOpenGroupKey(entry.key)}
+                    onMouseLeave={() => setOpenGroupKey((previous) => (previous === entry.key ? null : previous))}
+                  >
+                    <button
+                      type="button"
+                      className={`menu-link menu-group-trigger ${groupIsActive ? "active" : ""}`}
+                      aria-haspopup="menu"
+                      aria-expanded={openGroupKey === entry.key ? "true" : "false"}
+                      onClick={() => handleGroupTriggerClick(entry.key)}
+                    >
+                      <i className={`fas ${entry.icon}`} />
+                      <span className="menu-text menu-group-text">
+                        <span>{entry.label}</span>
+                        <i className="fas fa-chevron-right menu-group-chevron" />
+                      </span>
+                    </button>
+                    <div className="menu-group-flyout" role="menu" aria-label={entry.label}>
+                      <div className="menu-group-title">{entry.label}</div>
+                      {entry.items.map((item) => (
+                        <NavLink
+                          key={item.to}
+                          to={item.to}
+                          end={item.end}
+                          className={({ isActive }) =>
+                            isActive ? "menu-group-link menu-group-link-active" : "menu-group-link"
+                          }
+                          onClick={() => {
+                            setOpenGroupKey(null);
+                            setMobileOpen(false);
+                          }}
+                        >
+                          <i className={`fas ${item.icon}`} />
+                          <span>{item.label}</span>
+                        </NavLink>
+                      ))}
+                    </div>
+                  </li>
+                );
+              }
+
+              return (
+                <li key={entry.to} className="menu-item">
+                  <NavLink
+                    to={entry.to}
+                    end={entry.end}
+                    className={({ isActive }) => (isActive ? "menu-link active" : "menu-link")}
+                    data-tooltip={entry.label}
+                    title={collapsed ? entry.label : undefined}
+                    aria-label={entry.label}
+                    onClick={() => setMobileOpen(false)}
+                  >
+                    <i className={`fas ${entry.icon}`} />
+                    <span className="menu-text">{entry.label}</span>
+                  </NavLink>
+                </li>
+              );
+            })}
           </ul>
         </div>
         <div className="sidebar-footer">
@@ -381,18 +440,18 @@ function App() {
                 isAllowedPath("/feature-flags") ? <FeatureFlags /> : <Navigate to={firstAllowedPath} replace />
               }
             />
-              {enableUserSettings ? (
-                <Route
-                  path="/settings"
-                  element={
-                    isAllowedPath("/settings") ? (
-                      <SettingsView settings={settings} updateSettings={updateSettings} />
-                    ) : (
-                      <Navigate to={firstAllowedPath} replace />
-                    )
-                  }
-                />
-              ) : (
+            {enableUserSettings ? (
+              <Route
+                path="/settings"
+                element={
+                  isAllowedPath("/settings") ? (
+                    <SettingsView settings={settings} updateSettings={updateSettings} />
+                  ) : (
+                    <Navigate to={firstAllowedPath} replace />
+                  )
+                }
+              />
+            ) : (
               <Route path="/settings" element={<Navigate to="/" replace />} />
             )}
             {enableUserProfile ? (
