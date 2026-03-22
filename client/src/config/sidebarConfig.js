@@ -18,6 +18,13 @@
 // Tip: wil je GEEN groep gebruiken voor een bestaand item?
 // Zet dat item als los "link" object op topniveau in SIDEBAR_ENTRIES
 // en haal het weg uit de "items" array van de groep.
+//
+// Header-kleur bovenaan de sidebar (stuk met logo):
+// - true  = altijd wit (handig voor donker logo)
+// - false = altijd meeleuren met sidebar
+// - null  = gebruik bestaande feature-flag gedrag
+export const SIDEBAR_HEADER_WHITE = null;
+
 export const SIDEBAR_ENTRIES = [
   { type: "link", to: "/", label: "Home", icon: "fa-home", end: true, permissions: ["/home*"] },
   {

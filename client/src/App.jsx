@@ -16,7 +16,7 @@ import useAppSettings from "./hooks/useAppSettings.js";
 import useAuth from "./hooks/useAuth.js";
 import usePermissions from "./hooks/usePermissions.js";
 import { loadBootstrap } from "./bootstrap.js";
-import { isRouteMatch, SIDEBAR_ENTRIES } from "./config/sidebarConfig.js";
+import { isRouteMatch, SIDEBAR_ENTRIES, SIDEBAR_HEADER_WHITE } from "./config/sidebarConfig.js";
 
 const SIDEBAR_KEY = "sidebarCollapsed";
 
@@ -202,7 +202,9 @@ function App() {
     setOpenGroupKey((previous) => (previous === groupKey ? null : groupKey));
   };
 
-  const sidebarHeaderClass = appSettings.featureFlags?.sidebarHeaderWhite ? "header-white" : "header-theme";
+  const sidebarHeaderWhiteEnabled =
+    SIDEBAR_HEADER_WHITE === null ? appSettings.featureFlags?.sidebarHeaderWhite : SIDEBAR_HEADER_WHITE;
+  const sidebarHeaderClass = sidebarHeaderWhiteEnabled ? "header-white" : "header-theme";
   const sidebarClass = `sidebar ${collapsed ? "collapsed" : ""} ${
     mobileOpen ? "mobile-open" : ""
   } variant-${settings.sidebarVariant} ${sidebarHeaderClass}`;
