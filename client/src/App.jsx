@@ -301,7 +301,6 @@ function App() {
                       </span>
                     </button>
                     <div className="menu-group-flyout" role="menu" aria-label={entry.label}>
-                      <div className="menu-group-title">{entry.label}</div>
                       {entry.items.map((item) => (
                         <NavLink
                           key={item.to}
