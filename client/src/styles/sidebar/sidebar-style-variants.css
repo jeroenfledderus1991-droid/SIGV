@@ -1,0 +1,102 @@
+/* Sidebar style presets (los van kleurvariant) */
+
+/* CLASSIC: gebruikt bestaande defaults, geen overrides nodig */
+
+.sidebar.sidebar-style-rounded {
+  border-radius: 0 18px 18px 0;
+  overflow: visible;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.24);
+}
+
+.sidebar.sidebar-style-rounded .sidebar-header {
+  border-bottom: 0;
+  padding-top: 12px;
+  padding-bottom: 12px;
+}
+
+.sidebar.sidebar-style-rounded .sidebar-menu {
+  padding-top: 8px;
+}
+
+.sidebar.sidebar-style-rounded .menu-link,
+.sidebar.sidebar-style-rounded .user-info,
+.sidebar.sidebar-style-rounded .profile-dropdown-item {
+  border-radius: 14px;
+}
+
+.sidebar.sidebar-style-rounded .menu-link.active::before {
+  left: 4px;
+  top: 9px;
+  bottom: 9px;
+  border-radius: 6px;
+}
+
+.sidebar.sidebar-style-rounded .menu-group-flyout,
+.sidebar.sidebar-style-rounded .profile-dropdown {
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, var(--sidebar-hover) 58%, #00000020);
+}
+
+.sidebar.sidebar-style-rounded .sidebar-footer {
+  border-top: 0;
+  padding-top: 6px;
+  padding-bottom: 14px;
+}
+
+.sidebar.sidebar-style-rounded.collapsed {
+  border-radius: 0 16px 16px 0;
+}
+
+.sidebar.sidebar-style-contrast {
+  --sidebar-text-muted: color-mix(in srgb, var(--sidebar-text) 76%, transparent);
+  box-shadow: none;
+  border-right: 1px solid color-mix(in srgb, var(--sidebar-text) 14%, transparent);
+}
+
+.sidebar.sidebar-style-contrast .sidebar-header {
+  border-bottom: 1px solid color-mix(in srgb, var(--sidebar-text) 16%, transparent);
+}
+
+.sidebar.sidebar-style-contrast .menu-link,
+.sidebar.sidebar-style-contrast .user-info,
+.sidebar.sidebar-style-contrast .profile-dropdown-item {
+  border-radius: 8px;
+  min-height: 36px;
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+
+.sidebar.sidebar-style-contrast .menu-link,
+.sidebar.sidebar-style-contrast .menu-group-link {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--sidebar-text) 10%, transparent);
+}
+
+.sidebar.sidebar-style-contrast .menu-link.active,
+.sidebar.sidebar-style-contrast .menu-group-link-active {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--sidebar-text) 26%, transparent);
+}
+
+.sidebar.sidebar-style-contrast .menu-link.active::before {
+  width: 2px;
+  left: 3px;
+  top: 8px;
+  bottom: 8px;
+}
+
+.sidebar.sidebar-style-contrast .menu-group-flyout,
+.sidebar.sidebar-style-contrast .profile-dropdown {
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, var(--sidebar-text) 14%, transparent);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+}
+
+.sidebar.sidebar-style-contrast .sidebar-toggle {
+  border: 1px solid color-mix(in srgb, var(--sidebar-text) 15%, transparent);
+}
+
+@media (max-width: 768px) {
+  .sidebar.sidebar-style-rounded,
+  .sidebar.sidebar-style-rounded.collapsed {
+    border-radius: 0;
+  }
+}

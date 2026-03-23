@@ -15,9 +15,7 @@ body {
     color: var(--text-primary);
     line-height: var(--line-height, 1.6);
     font-size: var(--font-size-base, 1rem);
-    font-smooth: always;
     -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
 }
 
 html, body {

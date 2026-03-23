@@ -16,7 +16,7 @@ import useAppSettings from "./hooks/useAppSettings.js";
 import useAuth from "./hooks/useAuth.js";
 import usePermissions from "./hooks/usePermissions.js";
 import { loadBootstrap } from "./bootstrap.js";
-import { isRouteMatch, SIDEBAR_ENTRIES, SIDEBAR_HEADER_WHITE } from "./config/sidebarConfig.js";
+import { isRouteMatch, SIDEBAR_ENTRIES, SIDEBAR_HEADER_WHITE, SIDEBAR_STYLE } from "./config/sidebarConfig.js";
 
 const SIDEBAR_KEY = "sidebarCollapsed";
 
@@ -204,10 +204,17 @@ function App() {
 
   const sidebarHeaderWhiteEnabled =
     SIDEBAR_HEADER_WHITE === null ? appSettings.featureFlags?.sidebarHeaderWhite : SIDEBAR_HEADER_WHITE;
+  const resolvedSidebarStyle = useMemo(() => {
+    const allowedStyles = new Set(["classic", "rounded", "contrast"]);
+    const envStyle = import.meta.env?.VITE_SIDEBAR_STYLE;
+    const requestedStyle = SIDEBAR_STYLE || envStyle || "classic";
+    const normalized = String(requestedStyle).trim().toLowerCase();
+    return allowedStyles.has(normalized) ? normalized : "classic";
+  }, []);
   const sidebarHeaderClass = sidebarHeaderWhiteEnabled ? "header-white" : "header-theme";
   const sidebarClass = `sidebar ${collapsed ? "collapsed" : ""} ${
     mobileOpen ? "mobile-open" : ""
-  } variant-${settings.sidebarVariant} ${sidebarHeaderClass}`;
+  } variant-${settings.sidebarVariant} ${sidebarHeaderClass} sidebar-style-${resolvedSidebarStyle}`;
   const appLoading =
     !isAuthRoute &&
     (!authReady ||

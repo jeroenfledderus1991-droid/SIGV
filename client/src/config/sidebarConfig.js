@@ -25,6 +25,13 @@
 // - null  = gebruik bestaande feature-flag gedrag
 export const SIDEBAR_HEADER_WHITE = null;
 
+// Sidebar stijl (los van kleur-variant uit theme settings):
+// - "classic"  = huidige look
+// - "rounded"  = afgeronde shell + zachtere, moderne knoppen
+// - "contrast" = strakkere outline look met compacte buttons
+// - null       = gebruik .env waarde VITE_SIDEBAR_STYLE (of fallback classic)
+export const SIDEBAR_STYLE = "rounded";
+
 export const SIDEBAR_ENTRIES = [
   { type: "link", to: "/", label: "Home", icon: "fa-home", end: true, permissions: ["/home*"] },
   {
