@@ -19,6 +19,12 @@ const { registerAuthRoutes } = require("./routes/authRoutes");
 const { registerClientShellRoutes } = require("./routes/clientShellRoutes");
 const { createAccessControl } = require("./security/accessControl");
 const { createAuthFlowHelpers } = require("./security/authFlowHelpers");
+const { createFailedLoginAudit } = require("./security/failedLoginAudit");
+const { createSystemErrorAudit } = require("./security/systemErrorAudit");
+const {
+  createErrorAuditCaptureMiddleware,
+  createExpressErrorAuditHandler,
+} = require("./security/errorAuditMiddleware");
 const { buildCspHeader } = require("./security/csp");
 const { registerCsrfProtection } = require("./security/csrfMiddleware");
 const { runStartupChecks } = require("./security/startupChecks");
@@ -110,6 +116,15 @@ const { shouldProxyToVite, proxyToVite } = createViteProxyHelpers({
   http,
   https,
 });
+const failedLoginAudit = createFailedLoginAudit({
+  auditConfig: config.authAudit,
+  envName: config.env,
+});
+const systemErrorAudit = createSystemErrorAudit({
+  auditConfig: config.systemErrorAudit,
+  envName: config.env,
+});
+systemErrorAudit.attachProcessHandlers();
 
 async function ensureDbConfigured(res) {
   if (!config.db.server) {
@@ -140,6 +155,7 @@ app.use((req, res, next) => {
 });
 app.use(cors({ origin: config.corsOrigin, credentials: true }));
 app.use(express.json());
+app.use(createErrorAuditCaptureMiddleware({ systemErrorAudit }));
 app.use("/api", (req, res, next) => {
   res.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
   res.set("Pragma", "no-cache");
@@ -211,6 +227,7 @@ const {
   loadPermissions,
   normalizeTableTint,
   normalizeContainerTint,
+  failedLoginAudit,
 });
 
 registerSystemRoutes({
@@ -228,6 +245,7 @@ registerSystemRoutes({
   DEFAULT_SETTINGS,
   normalizeTableTint,
   normalizeContainerTint,
+  systemErrorAudit,
 });
 
 registerAuthRoutes({
@@ -258,6 +276,7 @@ registerAuthRoutes({
   DEFAULT_SETTINGS,
   normalizeTableTint,
   normalizeContainerTint,
+  failedLoginAudit,
 });
 
 registerRoleRoutes({
@@ -324,6 +343,7 @@ registerClientShellRoutes({
   getContainerTintRgb,
 });
 
+app.use(createExpressErrorAuditHandler({ systemErrorAudit, isProduction }));
 app.use((req, res) => {
   res.status(404).json({ error: "Not Found" });
 });

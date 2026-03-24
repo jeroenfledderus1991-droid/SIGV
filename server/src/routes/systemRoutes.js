@@ -1,3 +1,27 @@
+function toText(value) {
+  if (value === undefined || value === null) return "";
+  return String(value).trim();
+}
+
+const CLIENT_ERROR_IGNORE_PATTERNS = [
+  "bootstrap-autofill-overlay.js",
+  "autofillfielddata.autocompletetype is null",
+  "-moz-osx-font-smoothing",
+  "font-smooth",
+  "regelset genegeerd vanwege foute selector",
+  "request failed with 401",
+  "ongeldige inloggegevens",
+  "te veel mislukte pogingen",
+  "csrf token mismatch",
+];
+
+function shouldIgnoreClientError({ message, stackTrace, sourceUrl }) {
+  const haystack = `${toText(message)} ${toText(stackTrace)} ${toText(sourceUrl)}`.toLowerCase();
+  if (!haystack) return true;
+  if (/^(chrome|moz|safari)-extension:\/\//i.test(toText(sourceUrl))) return true;
+  return CLIENT_ERROR_IGNORE_PATTERNS.some((pattern) => haystack.includes(pattern));
+}
+
 function registerSystemRoutes({
   app,
   config,
@@ -13,6 +37,7 @@ function registerSystemRoutes({
   DEFAULT_SETTINGS,
   normalizeTableTint,
   normalizeContainerTint,
+  systemErrorAudit,
 }) {
   app.get("/api/health", (req, res) => {
     res.json({ status: "ok", env: config.env });
@@ -163,6 +188,45 @@ function registerSystemRoutes({
       res.json({ success: true });
     } catch (error) {
       res.status(500).json({ error: "Failed to save user settings." });
+    }
+  });
+
+  app.post("/api/system-errors/client", async (req, res) => {
+    try {
+      const payload = req.body || {};
+      const message = toText(payload.message).slice(0, 1024);
+      const stackTrace = toText(payload.stackTrace).slice(0, 4000);
+      const sourceUrl = toText(payload.sourceUrl).slice(0, 1024);
+      if (!message) {
+        return res.status(400).json({ error: "Message is verplicht." });
+      }
+      if (shouldIgnoreClientError({ message, stackTrace, sourceUrl })) {
+        return res.status(202).json({ logged: false, ignored: true });
+      }
+
+      const logged = await systemErrorAudit?.logErrorEvent?.({
+        severity: "error",
+        source: "client",
+        category: toText(payload.category).slice(0, 80) || "client_error",
+        message,
+        stackTrace,
+        requestPath: toText(payload.userPath || req.path).slice(0, 255),
+        httpMethod: "CLIENT",
+        statusCode: null,
+        userId: Number.isInteger(req.user?.user_id) ? req.user.user_id : null,
+        username: req.user?.username || null,
+        ipAddress: (req.ip || "").trim(),
+        userAgent: req.headers["user-agent"] || "",
+        metadata: {
+          sourceUrl,
+          lineNumber: Number.isFinite(payload.lineNumber) ? payload.lineNumber : null,
+          columnNumber: Number.isFinite(payload.columnNumber) ? payload.columnNumber : null,
+          extra: payload.metadata && typeof payload.metadata === "object" ? payload.metadata : null,
+        },
+      });
+      return res.status(202).json({ logged: Boolean(logged) });
+    } catch (error) {
+      return res.status(202).json({ logged: false });
     }
   });
 }

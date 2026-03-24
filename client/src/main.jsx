@@ -14,8 +14,11 @@ import "./styles/matrix-styling.css";
 import "./styles/client-table.css";
 import "./styles/app.css";
 import App from "./App.jsx";
+import { initClientErrorLogging } from "./utils/clientErrorLogger.js";
 
 const RootWrapper = import.meta.env.DEV ? Fragment : StrictMode;
+
+initClientErrorLogging();
 
 createRoot(document.getElementById("root")).render(
   <RootWrapper>

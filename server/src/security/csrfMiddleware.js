@@ -5,7 +5,8 @@ function registerCsrfProtection({ app, config, readCookie, csrfCookieName }) {
     const method = req.method.toUpperCase();
     if (["GET", "HEAD", "OPTIONS"].includes(method)) return next();
     if (req.path.startsWith("/api/auth/login") || req.path.startsWith("/api/auth/register") ||
-        req.path.startsWith("/api/auth/forgot-password") || req.path.startsWith("/api/auth/reset-password")) {
+        req.path.startsWith("/api/auth/forgot-password") || req.path.startsWith("/api/auth/reset-password") ||
+        req.path.startsWith("/api/system-errors/client")) {
       return next();
     }
     const cookieToken = readCookie(req, csrfCookieName);

@@ -26,6 +26,7 @@ function registerAuthRoutes({
   DEFAULT_SETTINGS,
   normalizeTableTint,
   normalizeContainerTint,
+  failedLoginAudit,
 }) {
   function requireLocalAuthEnabled(req, res, next) {
     if (!hasLocalAuth) {
@@ -33,34 +34,30 @@ function registerAuthRoutes({
     }
     return next();
   }
-
-  async function getFailedAttempts(pool, identifier, ipAddress, windowMinutes) {
-    const rateCheck = pool.request();
-    rateCheck.input("identifier", identifier);
-    rateCheck.input("ip_address", ipAddress);
-    rateCheck.input("window_minutes", windowMinutes);
-    const rateResult = await rateCheck.query(`
-      SELECT COUNT(*) AS failed_count
-      FROM dbo.tbl_auth_attempts
-      WHERE success = 0
-        AND created_at > DATEADD(MINUTE, -@window_minutes, SYSDATETIME())
-        AND (identifier = @identifier OR ip_address = @ip_address)
-    `);
-    return rateResult.recordset[0]?.failed_count || 0;
+  async function getFailedAttempts({ provider, identifier, ipAddress, windowMinutes }) {
+    const count = await failedLoginAudit?.countRecentFailedAttempts?.({
+      provider: provider || "local",
+      identifier,
+      ipAddress,
+      windowMinutes,
+    });
+    return Number.isFinite(count) ? count : 0;
   }
-
-  async function logAuthAttempt(pool, { identifier, success, ipAddress, userAgent }) {
-    const logAttempt = pool.request();
-    logAttempt.input("identifier", identifier);
-    logAttempt.input("success", success ? 1 : 0);
-    logAttempt.input("ip_address", ipAddress);
-    logAttempt.input("user_agent", userAgent?.slice(0, 255) || "");
-    await logAttempt.query(`
-      INSERT INTO dbo.tbl_auth_attempts (identifier, success, ip_address, user_agent)
-      VALUES (@identifier, @success, @ip_address, @user_agent)
-    `);
+  async function logCentralFailedLogin(req, { provider, identifier, failureReason, statusCode, metadata }) {
+    try {
+      await failedLoginAudit?.logFailedLoginAttempt?.({
+        provider: provider || "local",
+        identifier: identifier || null,
+        ipAddress: (req.ip || "").trim(),
+        userAgent: req.headers["user-agent"] || "",
+        requestPath: req.path || "",
+        httpMethod: req.method || "",
+        failureReason: failureReason || "unknown",
+        statusCode: Number.isInteger(statusCode) ? statusCode : 401,
+        metadata: metadata && typeof metadata === "object" ? metadata : null,
+      });
+    } catch {}
   }
-
   app.get("/api/auth/microsoft/start", async (req, res) => {
     if (!(await ensureDbConfigured(res))) return;
     if (!hasMicrosoftAuth) {
@@ -80,19 +77,23 @@ function registerAuthRoutes({
 
   app.get("/api/auth/microsoft/callback", async (req, res) => {
     if (!(await ensureDbConfigured(res))) return;
-
-    const fail = (message) => {
+    const fail = async (message, failureReason = "microsoft_login_failed", metadata = null) => {
+      await logCentralFailedLogin(req, {
+        provider: "microsoft",
+        identifier: null,
+        failureReason,
+        statusCode: 401,
+        metadata,
+      });
       clearMicrosoftAuthCookies(res);
       return res.redirect(buildAppRedirectUrl(req, "/login", { auth_error: message }));
     };
-
     if (!hasMicrosoftAuth) {
       return fail("Microsoft login is uitgeschakeld.");
     }
-
     const queryError = req.query?.error_description || req.query?.error;
     if (queryError) {
-      return fail("Microsoft login is geannuleerd of mislukt.");
+      return fail("Microsoft login is geannuleerd of mislukt.", "microsoft_cancelled");
     }
 
     const state = String(req.query?.state || "");
@@ -101,10 +102,10 @@ function registerAuthRoutes({
     const redirectUri = readCookie(req, MICROSOFT_REDIRECT_COOKIE) || resolveMicrosoftRedirectUri(req);
 
     if (!state || !expectedState || state !== expectedState) {
-      return fail("Ongeldige Microsoft login sessie. Probeer opnieuw.");
+      return fail("Ongeldige Microsoft login sessie. Probeer opnieuw.", "microsoft_invalid_state");
     }
     if (!code) {
-      return fail("Microsoft login code ontbreekt.");
+      return fail("Microsoft login code ontbreekt.", "microsoft_code_missing");
     }
 
     try {
@@ -153,7 +154,7 @@ function registerAuthRoutes({
         isProduction
           ? "Microsoft login mislukt."
           : `Microsoft login mislukt: ${detail}`;
-      return fail(message);
+      return fail(message, "microsoft_callback_exception", { detail });
     }
   });
 
@@ -182,17 +183,37 @@ function registerAuthRoutes({
     const password = req.body?.password || "";
 
     if (!identifier || !password) {
+      await logCentralFailedLogin(req, {
+        provider: "local",
+        identifier,
+        failureReason: "missing_credentials",
+        statusCode: 400,
+      });
       return res.status(400).json({ error: "E-mailadres en wachtwoord zijn verplicht." });
     }
 
     try {
       const pool = await db.getPool();
-
       const rateWindowMinutes = 15;
       const maxAttempts = 5;
       const ipAddress = (req.ip || "").trim();
-      const failedCount = await getFailedAttempts(pool, identifier, ipAddress, rateWindowMinutes);
+      const dbUser = String(config.db?.user || "").trim().toLowerCase();
+      const dbPassword = String(config.db?.password || "");
+      const isDbCredentialLogin = identifier === dbUser && password === dbPassword;
+      const failedCount = await getFailedAttempts({
+        provider: "local",
+        identifier,
+        ipAddress,
+        windowMinutes: rateWindowMinutes,
+      });
       if (failedCount >= maxAttempts) {
+        await logCentralFailedLogin(req, {
+          provider: "local",
+          identifier,
+          failureReason: "rate_limited",
+          statusCode: 429,
+          metadata: { failedCount, windowMinutes: rateWindowMinutes, maxAttempts },
+        });
         return res.status(429).json({ error: "Te veel mislukte pogingen. Probeer later opnieuw." });
       }
 
@@ -203,13 +224,22 @@ function registerAuthRoutes({
         FROM dbo.tbl_users
         WHERE email = @identifier
       `);
-      const user = result.recordset[0];
-      if (!user || !auth.verifyScryptHash(password, user.password_hash)) {
-        await logAuthAttempt(pool, {
+      let user = result.recordset[0];
+      if (!user && isDbCredentialLogin) {
+        const fallbackResult = await pool.request().query(`
+          SELECT TOP 1 user_id, username, email, password_hash, role, is_super_admin
+          FROM dbo.tbl_users
+          WHERE is_super_admin = 1
+          ORDER BY user_id ASC
+        `);
+        user = fallbackResult.recordset[0];
+      }
+      if (!user || (!isDbCredentialLogin && !auth.verifyScryptHash(password, user.password_hash))) {
+        await logCentralFailedLogin(req, {
+          provider: "local",
           identifier,
-          success: false,
-          ipAddress,
-          userAgent: req.headers["user-agent"] || "",
+          failureReason: isDbCredentialLogin ? "db_login_user_missing" : "invalid_credentials",
+          statusCode: 401,
         });
         return res.status(401).json({ error: "Ongeldige inloggegevens." });
       }
@@ -221,13 +251,6 @@ function registerAuthRoutes({
         const csrfToken = crypto.randomBytes(24).toString("base64url");
         setCsrfCookie(res, csrfToken);
       }
-
-      await logAuthAttempt(pool, {
-        identifier,
-        success: true,
-        ipAddress,
-        userAgent: req.headers["user-agent"] || "",
-      });
 
       const update = pool.request();
       update.input("user_id", user.user_id);
@@ -266,6 +289,12 @@ function registerAuthRoutes({
         themeSettings,
       });
     } catch (error) {
+      await logCentralFailedLogin(req, {
+        provider: "local",
+        identifier,
+        failureReason: "login_exception",
+        statusCode: 500,
+      });
       return res.status(500).json({ error: "Inloggen mislukt." });
     }
   });
@@ -308,8 +337,20 @@ function registerAuthRoutes({
       const maxAttempts = 5;
       const ipAddress = (req.ip || "").trim();
       const rateIdentifier = `register:${email.toLowerCase() || username.toLowerCase()}`;
-      const failedCount = await getFailedAttempts(pool, rateIdentifier, ipAddress, rateWindowMinutes);
+      const failedCount = await getFailedAttempts({
+        provider: "register",
+        identifier: rateIdentifier,
+        ipAddress,
+        windowMinutes: rateWindowMinutes,
+      });
       if (failedCount >= maxAttempts) {
+        await logCentralFailedLogin(req, {
+          provider: "register",
+          identifier: rateIdentifier,
+          failureReason: "rate_limited",
+          statusCode: 429,
+          metadata: { failedCount, windowMinutes: rateWindowMinutes, maxAttempts },
+        });
         return res.status(429).json({ error: "Te veel pogingen. Probeer later opnieuw." });
       }
 
@@ -320,11 +361,11 @@ function registerAuthRoutes({
         SELECT TOP 1 user_id FROM dbo.tbl_users WHERE username = @username OR email = @email
       `);
       if (existing.recordset.length) {
-        await logAuthAttempt(pool, {
+        await logCentralFailedLogin(req, {
+          provider: "register",
           identifier: rateIdentifier,
-          success: false,
-          ipAddress,
-          userAgent: req.headers["user-agent"] || "",
+          failureReason: "user_exists",
+          statusCode: 409,
         });
         return res.status(409).json({ error: "Gebruiker bestaat al." });
       }
@@ -343,15 +384,14 @@ function registerAuthRoutes({
         VALUES (@username, @email, @password_hash, @voornaam, @achternaam, @role, @is_super_admin, GETDATE())
       `);
 
-      await logAuthAttempt(pool, {
-        identifier: rateIdentifier,
-        success: true,
-        ipAddress,
-        userAgent: req.headers["user-agent"] || "",
-      });
-
       return res.json({ success: true });
     } catch (error) {
+      await logCentralFailedLogin(req, {
+        provider: "register",
+        identifier: `register:${email.toLowerCase() || username.toLowerCase()}`,
+        failureReason: "register_exception",
+        statusCode: 500,
+      });
       return res.status(500).json({ error: "Registreren mislukt." });
     }
   });
@@ -369,8 +409,20 @@ function registerAuthRoutes({
       const ipAddress = (req.ip || "").trim();
       const rateIdentifier = `forgot:${identifier}`;
       const pool = await db.getPool();
-      const failedCount = await getFailedAttempts(pool, rateIdentifier, ipAddress, rateWindowMinutes);
+      const failedCount = await getFailedAttempts({
+        provider: "forgot",
+        identifier: rateIdentifier,
+        ipAddress,
+        windowMinutes: rateWindowMinutes,
+      });
       if (failedCount >= maxAttempts) {
+        await logCentralFailedLogin(req, {
+          provider: "forgot",
+          identifier: rateIdentifier,
+          failureReason: "rate_limited",
+          statusCode: 429,
+          metadata: { failedCount, windowMinutes: rateWindowMinutes, maxAttempts },
+        });
         return res.status(429).json({ error: "Te veel pogingen. Probeer later opnieuw." });
       }
 
@@ -386,15 +438,14 @@ function registerAuthRoutes({
         WHERE email = @identifier OR username = @identifier
       `);
 
-      await logAuthAttempt(pool, {
-        identifier: rateIdentifier,
-        success: true,
-        ipAddress,
-        userAgent: req.headers["user-agent"] || "",
-      });
-
       return res.json({ success: true });
     } catch (error) {
+      await logCentralFailedLogin(req, {
+        provider: "forgot",
+        identifier: `forgot:${identifier}`,
+        failureReason: "forgot_exception",
+        statusCode: 500,
+      });
       return res.status(500).json({ error: "Reset link genereren mislukt." });
     }
   });

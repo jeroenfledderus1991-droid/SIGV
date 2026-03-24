@@ -45,6 +45,17 @@ dotnet run
 ## Database (MSSQL)
 - Uses `DB_SERVER`, `DB_PORT`, `DB_NAME`, `DB_USER`, and `DB_PASSWORD`.
 - Optional: set `APP_DEFAULT_USER_EMAIL` to pick the default user for theme settings.
+- Optional central failed-login audit database (shared across tools):
+  - Run `sql/security_audit/001_create_auth_audit_database.sql` once.
+  - Configure:
+    - `AUTH_AUDIT_ENABLED=1`
+    - `AUTH_AUDIT_DB_NAME=TemplateSecurityAudit`
+    - `AUTH_AUDIT_DB_SERVER`, `AUTH_AUDIT_DB_USER`, `AUTH_AUDIT_DB_PASSWORD`
+    - Optional: `AUTH_AUDIT_APP_NAME=<tool-naam>` to identify each template app
+  - If enabled and configured, failed login attempts are stored in `dbo.tbl_failed_login_events`.
+  - For generic server errors, also run `sql/security_audit/002_create_system_error_table.sql`.
+  - General 5xx/process errors are stored in `dbo.tbl_system_errors`.
+  - Relevante client console errors (window errors, unhandled rejections, console.error) worden gefilterd en ook opgeslagen in `dbo.tbl_system_errors` met `source='client'`.
 - Express endpoints:
   - `/api/db/health`
   - `/api/db/info`

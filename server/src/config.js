@@ -53,6 +53,57 @@ const config = {
     encrypt: envFlag(process.env.DB_ENCRYPT, !isLocalLike),
     trustServerCertificate: envFlag(process.env.DB_TRUST_SERVER_CERTIFICATE, isLocalLike),
   },
+  authAudit: {
+    enabled: envFlag(process.env.AUTH_AUDIT_ENABLED, true),
+    appName: pickEnv(process.env.AUTH_AUDIT_APP_NAME, process.env.APP_NAME, "react-template"),
+    autoCreateTable: envFlag(process.env.AUTH_AUDIT_AUTO_CREATE_TABLE, true),
+    db: {
+      server: pickEnv(process.env.AUTH_AUDIT_DB_SERVER, process.env.DB_SERVER),
+      port: Number(pickEnv(process.env.AUTH_AUDIT_DB_PORT, process.env.DB_PORT, "1433")),
+      name: process.env.AUTH_AUDIT_DB_NAME || "",
+      user: pickEnv(process.env.AUTH_AUDIT_DB_USER, process.env.DB_USER),
+      password: pickEnv(process.env.AUTH_AUDIT_DB_PASSWORD, process.env.DB_PASSWORD),
+      maxConnections: Number(pickEnv(process.env.AUTH_AUDIT_DB_MAX_CONNECTIONS, "5")),
+      connectionTimeout: Number(pickEnv(process.env.AUTH_AUDIT_DB_CONNECTION_TIMEOUT, "10")),
+      commandTimeout: Number(pickEnv(process.env.AUTH_AUDIT_DB_COMMAND_TIMEOUT, "10")),
+      encrypt: envFlag(process.env.AUTH_AUDIT_DB_ENCRYPT, !isLocalLike),
+      trustServerCertificate: envFlag(
+        process.env.AUTH_AUDIT_DB_TRUST_SERVER_CERTIFICATE,
+        isLocalLike
+      ),
+    },
+  },
+  systemErrorAudit: {
+    enabled: envFlag(process.env.SYSTEM_ERROR_AUDIT_ENABLED, true),
+    appName: pickEnv(
+      process.env.SYSTEM_ERROR_AUDIT_APP_NAME,
+      process.env.AUTH_AUDIT_APP_NAME,
+      process.env.APP_NAME,
+      "react-template"
+    ),
+    autoCreateTable: envFlag(process.env.SYSTEM_ERROR_AUDIT_AUTO_CREATE_TABLE, true),
+    db: {
+      server: pickEnv(process.env.SYSTEM_ERROR_AUDIT_DB_SERVER, process.env.AUTH_AUDIT_DB_SERVER, process.env.DB_SERVER),
+      port: Number(
+        pickEnv(process.env.SYSTEM_ERROR_AUDIT_DB_PORT, process.env.AUTH_AUDIT_DB_PORT, process.env.DB_PORT, "1433")
+      ),
+      name: pickEnv(process.env.SYSTEM_ERROR_AUDIT_DB_NAME, process.env.AUTH_AUDIT_DB_NAME),
+      user: pickEnv(process.env.SYSTEM_ERROR_AUDIT_DB_USER, process.env.AUTH_AUDIT_DB_USER, process.env.DB_USER),
+      password: pickEnv(
+        process.env.SYSTEM_ERROR_AUDIT_DB_PASSWORD,
+        process.env.AUTH_AUDIT_DB_PASSWORD,
+        process.env.DB_PASSWORD
+      ),
+      maxConnections: Number(pickEnv(process.env.SYSTEM_ERROR_AUDIT_DB_MAX_CONNECTIONS, "5")),
+      connectionTimeout: Number(pickEnv(process.env.SYSTEM_ERROR_AUDIT_DB_CONNECTION_TIMEOUT, "10")),
+      commandTimeout: Number(pickEnv(process.env.SYSTEM_ERROR_AUDIT_DB_COMMAND_TIMEOUT, "10")),
+      encrypt: envFlag(process.env.SYSTEM_ERROR_AUDIT_DB_ENCRYPT, !isLocalLike),
+      trustServerCertificate: envFlag(
+        process.env.SYSTEM_ERROR_AUDIT_DB_TRUST_SERVER_CERTIFICATE,
+        isLocalLike
+      ),
+    },
+  },
   microsoft: {
     enabled: process.env.MICROSOFT_AUTH_ENABLED !== "0",
     clientId: pickEnv(process.env.INLOG_MICROSOFT_CLIENT_ID, process.env.MICROSOFT_CLIENT_ID),

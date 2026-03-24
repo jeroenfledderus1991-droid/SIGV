@@ -30,7 +30,7 @@ export const SIDEBAR_HEADER_WHITE = null;
 // - "rounded"  = afgeronde shell + zachtere, moderne knoppen
 // - "contrast" = strakkere outline look met compacte buttons
 // - null       = gebruik .env waarde VITE_SIDEBAR_STYLE (of fallback classic)
-export const SIDEBAR_STYLE = "rounded";
+export const SIDEBAR_STYLE = "contrast";
 
 export const SIDEBAR_ENTRIES = [
   { type: "link", to: "/", label: "Home", icon: "fa-home", end: true, permissions: ["/home*"] },
