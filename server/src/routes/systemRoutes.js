@@ -28,6 +28,7 @@ function registerSystemRoutes({
   db,
   ensureDbConfigured,
   requireAuth,
+  requirePermission,
   requireMicrosoftAuth,
   buildBootstrap,
   buildAppFeatureFlags,
@@ -88,7 +89,7 @@ function registerSystemRoutes({
     });
   });
 
-  app.get("/api/db/health", async (req, res) => {
+  app.get("/api/db/health", requireAuth, requirePermission("/settings*"), async (req, res) => {
     if (!(await ensureDbConfigured(res))) return;
 
     try {
@@ -99,7 +100,7 @@ function registerSystemRoutes({
     }
   });
 
-  app.get("/api/db/info", async (req, res) => {
+  app.get("/api/db/info", requireAuth, requirePermission("/settings*"), async (req, res) => {
     if (!(await ensureDbConfigured(res))) return;
 
     try {
@@ -191,7 +192,7 @@ function registerSystemRoutes({
     }
   });
 
-  app.post("/api/system-errors/client", async (req, res) => {
+  app.post("/api/system-errors/client", requireAuth, async (req, res) => {
     try {
       const payload = req.body || {};
       const message = toText(payload.message).slice(0, 1024);

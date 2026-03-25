@@ -10,6 +10,8 @@ function registerAccountRoutes({
   isSuperAdminRoleName,
   getSuperAdminRoleId,
 }) {
+  const SUPPORT_ADMIN_INTERNAL_ROLE = "support_admin_int";
+
   app.get("/api/accounts/users", requireAuth, requirePermission("/accounts*"), async (req, res) => {
     if (!(await ensureDbConfigured(res))) return;
     try {
@@ -17,14 +19,15 @@ function registerAccountRoutes({
       const request = pool.request();
       request.input("eesa_email", EESA_SUPER_ADMIN_EMAIL);
       request.input("super_admin_name", SUPER_ADMIN_ROLE_NAME);
+      request.input("support_admin_role", SUPPORT_ADMIN_INTERNAL_ROLE);
       const result = await request.query(`
         SELECT u.user_id AS id,
                u.username,
                u.email,
                CASE
                  WHEN u.is_super_admin = 1 THEN NULL
-                 WHEN LOWER(COALESCE(r.role_naam, u.role, '')) = LOWER(@super_admin_name) THEN NULL
-                 ELSE COALESCE(r.role_naam, u.role)
+                 WHEN LOWER(COALESCE(r.role_naam, '')) = LOWER(@super_admin_name) THEN NULL
+                 ELSE r.role_naam
                END AS role,
                r.role_id AS role_id,
                u.is_super_admin,
@@ -39,6 +42,7 @@ function registerAccountRoutes({
           ORDER BY ur.role_volgorde
         ) r
         WHERE LOWER(u.email) <> LOWER(@eesa_email)
+          AND LOWER(COALESCE(u.role, '')) <> LOWER(@support_admin_role)
         ORDER BY u.username
       `);
       res.json(result.recordset || []);
@@ -83,7 +87,7 @@ function registerAccountRoutes({
       const lookup = pool.request();
       lookup.input("user_id", userId);
       const userResult = await lookup.query(`
-        SELECT TOP 1 user_id, email, is_super_admin
+        SELECT TOP 1 user_id, email, is_super_admin, role
         FROM dbo.tbl_users
         WHERE user_id = @user_id
       `);
@@ -93,6 +97,9 @@ function registerAccountRoutes({
       }
       if (isEesaSuperAdminEmail(targetUser.email)) {
         return res.status(403).json({ error: "Dit account kan niet worden aangepast." });
+      }
+      if (String(targetUser.role || "").toLowerCase() === SUPPORT_ADMIN_INTERNAL_ROLE) {
+        return res.status(403).json({ error: "Dit support admin account kan niet worden aangepast." });
       }
       if (wantsSuperAdminChange && !isEesaSuperAdminEmail(req.user?.email)) {
         return res.status(403).json({ error: "Alleen EESA mag Super Admin toewijzen of intrekken." });
@@ -131,19 +138,13 @@ function registerAccountRoutes({
 
         const update = pool.request();
         update.input("user_id", userId);
-        update.input("role", roleName);
         update.input("is_super_admin", nextIsSuperAdmin ? 1 : 0);
-        await update.query(
-          "UPDATE dbo.tbl_users SET role = @role, is_super_admin = @is_super_admin WHERE user_id = @user_id"
-        );
+        await update.query("UPDATE dbo.tbl_users SET is_super_admin = @is_super_admin WHERE user_id = @user_id");
       } else {
         const update = pool.request();
         update.input("user_id", userId);
-        update.input("role", null);
         update.input("is_super_admin", nextIsSuperAdmin ? 1 : 0);
-        await update.query(
-          "UPDATE dbo.tbl_users SET role = @role, is_super_admin = @is_super_admin WHERE user_id = @user_id"
-        );
+        await update.query("UPDATE dbo.tbl_users SET is_super_admin = @is_super_admin WHERE user_id = @user_id");
       }
 
       res.json({ success: true });
@@ -167,7 +168,7 @@ function registerAccountRoutes({
       const lookup = pool.request();
       lookup.input("user_id", userId);
       const userResult = await lookup.query(`
-        SELECT TOP 1 email
+        SELECT TOP 1 email, role
         FROM dbo.tbl_users
         WHERE user_id = @user_id
       `);
@@ -177,6 +178,9 @@ function registerAccountRoutes({
       }
       if (isEesaSuperAdminEmail(targetUser.email)) {
         return res.status(403).json({ error: "Dit account kan niet worden verwijderd." });
+      }
+      if (String(targetUser.role || "").toLowerCase() === SUPPORT_ADMIN_INTERNAL_ROLE) {
+        return res.status(403).json({ error: "Dit support admin account kan niet worden verwijderd." });
       }
 
       const request = pool.request();

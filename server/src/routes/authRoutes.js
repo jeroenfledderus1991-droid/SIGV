@@ -27,6 +27,7 @@ function registerAuthRoutes({
   normalizeTableTint,
   normalizeContainerTint,
   failedLoginAudit,
+  supportAdminAllowlist,
 }) {
   function requireLocalAuthEnabled(req, res, next) {
     if (!hasLocalAuth) {
@@ -122,14 +123,11 @@ function registerAuthRoutes({
       }
 
       const pool = await db.getPool();
-      const lookup = pool.request();
-      lookup.input("email", email);
-      const userResult = await lookup.query(`
-        SELECT TOP 1 user_id, username, email, role, is_super_admin
-        FROM dbo.tbl_users
-        WHERE LOWER(email) = LOWER(@email)
-      `);
-      const user = userResult.recordset[0];
+      const user = await supportAdminAllowlist.ensureAllowlistedMicrosoftUser({
+        appPool: pool,
+        email,
+        createPasswordHash: auth.createScryptHash,
+      });
       if (!user) {
         return fail("Je Microsoft account is niet gekoppeld aan een gebruiker.");
       }
@@ -197,9 +195,6 @@ function registerAuthRoutes({
       const rateWindowMinutes = 15;
       const maxAttempts = 5;
       const ipAddress = (req.ip || "").trim();
-      const dbUser = String(config.db?.user || "").trim().toLowerCase();
-      const dbPassword = String(config.db?.password || "");
-      const isDbCredentialLogin = identifier === dbUser && password === dbPassword;
       const failedCount = await getFailedAttempts({
         provider: "local",
         identifier,
@@ -220,25 +215,28 @@ function registerAuthRoutes({
       const request = pool.request();
       request.input("identifier", identifier);
       const result = await request.query(`
-        SELECT TOP 1 user_id, username, email, password_hash, role, is_super_admin
-        FROM dbo.tbl_users
-        WHERE email = @identifier
+        SELECT TOP 1
+               u.user_id,
+               u.username,
+               u.email,
+               u.password_hash,
+               r.role_naam AS role,
+               u.is_super_admin
+        FROM dbo.tbl_users u
+        OUTER APPLY (
+          SELECT TOP 1 ur.role_naam, ur.role_volgorde
+          FROM dbo.vw_user_roles ur
+          WHERE ur.user_id = u.user_id
+          ORDER BY ur.role_volgorde
+        ) r
+        WHERE LOWER(u.email) = LOWER(@identifier)
       `);
-      let user = result.recordset[0];
-      if (!user && isDbCredentialLogin) {
-        const fallbackResult = await pool.request().query(`
-          SELECT TOP 1 user_id, username, email, password_hash, role, is_super_admin
-          FROM dbo.tbl_users
-          WHERE is_super_admin = 1
-          ORDER BY user_id ASC
-        `);
-        user = fallbackResult.recordset[0];
-      }
-      if (!user || (!isDbCredentialLogin && !auth.verifyScryptHash(password, user.password_hash))) {
+      const user = result.recordset[0];
+      if (!user || !auth.verifyScryptHash(password, user.password_hash)) {
         await logCentralFailedLogin(req, {
           provider: "local",
           identifier,
-          failureReason: isDbCredentialLogin ? "db_login_user_missing" : "invalid_credentials",
+          failureReason: "invalid_credentials",
           statusCode: 401,
         });
         return res.status(401).json({ error: "Ongeldige inloggegevens." });

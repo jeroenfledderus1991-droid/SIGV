@@ -45,7 +45,10 @@ function createAccessControl({
       if (!session) {
         return res.status(401).json({ error: "Not authenticated." });
       }
-      req.user = session.user;
+      req.user = {
+        ...session.user,
+        is_super_admin: Boolean(session.user?.is_super_admin || isEesaSuperAdminEmail(session.user?.email)),
+      };
       req.sessionId = session.sessionId;
       if (config.csrfEnabled && !readCookie(req, csrfCookieName)) {
         setCsrfCookie(res, crypto.randomBytes(24).toString("base64url"));
@@ -70,7 +73,7 @@ function createAccessControl({
 
   async function loadPermissions(req) {
     if (req.permissions) return req.permissions;
-    if (req.user?.is_super_admin) {
+    if (req.user?.is_super_admin || isEesaSuperAdminEmail(req.user?.email)) {
       req.permissions = { allowedPaths: ["*"], roles: ["super_admin"] };
       return req.permissions;
     }
@@ -81,11 +84,6 @@ function createAccessControl({
         SELECT ur.role_id
         FROM dbo.tbl_user_roles ur
         WHERE ur.user_id = @user_id
-        UNION
-        SELECT r.id AS role_id
-        FROM dbo.tbl_users u
-        JOIN dbo.tbl_roles r ON LOWER(r.naam) = LOWER(ISNULL(u.role, ''))
-        WHERE u.user_id = @user_id
       )
     `;
 

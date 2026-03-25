@@ -97,12 +97,18 @@ async function getSessionUser(req) {
            u.email,
            u.voornaam,
            u.achternaam,
-           u.role,
+           r.role_naam AS role,
            u.is_super_admin,
            s.login_time,
            s.last_seen
     FROM dbo.tbl_active_sessions s
     JOIN dbo.tbl_users u ON u.user_id = s.user_id
+    OUTER APPLY (
+      SELECT TOP 1 ur.role_naam, ur.role_volgorde
+      FROM dbo.vw_user_roles ur
+      WHERE ur.user_id = u.user_id
+      ORDER BY ur.role_volgorde
+    ) r
     WHERE s.session_id = @session_id
   `);
   const user = result.recordset[0];

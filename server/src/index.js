@@ -21,6 +21,7 @@ const { createAccessControl } = require("./security/accessControl");
 const { createAuthFlowHelpers } = require("./security/authFlowHelpers");
 const { createFailedLoginAudit } = require("./security/failedLoginAudit");
 const { createSystemErrorAudit } = require("./security/systemErrorAudit");
+const { createSupportAdminAllowlist } = require("./security/supportAdminAllowlist");
 const {
   createErrorAuditCaptureMiddleware,
   createExpressErrorAuditHandler,
@@ -125,6 +126,10 @@ const systemErrorAudit = createSystemErrorAudit({
   envName: config.env,
 });
 systemErrorAudit.attachProcessHandlers();
+const supportAdminAllowlist = createSupportAdminAllowlist({
+  allowlistConfig: config.supportAdminAllowlist,
+  envName: config.env,
+});
 
 async function ensureDbConfigured(res) {
   if (!config.db.server) {
@@ -236,6 +241,7 @@ registerSystemRoutes({
   db,
   ensureDbConfigured,
   requireAuth,
+  requirePermission,
   requireMicrosoftAuth,
   buildBootstrap,
   buildAppFeatureFlags,
@@ -277,6 +283,7 @@ registerAuthRoutes({
   normalizeTableTint,
   normalizeContainerTint,
   failedLoginAudit,
+  supportAdminAllowlist,
 });
 
 registerRoleRoutes({
