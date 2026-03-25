@@ -39,24 +39,6 @@ async function request(path, options = {}) {
   return response.json();
 }
 
-async function requestSafe(path, options = {}) {
-  try {
-    const csrfToken = getCookieValue("csrf_token");
-    const response = await fetch(`${API_BASE}${path}`, {
-      headers: {
-        "Content-Type": "application/json",
-        ...(csrfToken ? { "X-CSRF-Token": decodeURIComponent(csrfToken) } : {}),
-        ...(options.headers || {}),
-      },
-      credentials: "include",
-      ...options,
-    });
-    return { ok: response.ok, status: response.status };
-  } catch {
-    return { ok: false, status: 0 };
-  }
-}
-
 export function getJson(path) {
   return request(path, { method: "GET" });
 }
@@ -71,8 +53,4 @@ export function putJson(path, body) {
 
 export function deleteJson(path) {
   return request(path, { method: "DELETE" });
-}
-
-export function postJsonSafe(path, body) {
-  return requestSafe(path, { method: "POST", body: JSON.stringify(body) });
 }

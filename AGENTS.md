@@ -116,18 +116,36 @@ This file captures the local rules and patterns for this template. Keep changes 
 
 ## ClientTable settings intake (verplicht)
 - Bij elke **nieuwe** tabel (`ClientTable`) moet de agent **altijd eerst** de instelbare tabelsettings uitvragen en bevestigen vóór implementatie.
+- Vaste defaults (altijd aan, alleen wijzigen bij expliciete user-vraag):
+  - Actiekolom altijd aanwezig en sticky rechts (`actions` + sticky gedrag).
+  - Filters/export altijd aanwezig (`enableColumnFilters`, `exportEnabled`).
+  - Kolomvoorkeuren altijd opslaan per user/device (verbergen/verplaatsen/breedtes/rijen).
 - Minimale vragenlijst per tabel:
   - Rijgedrag: `enableRowClickAction`, `rowClickActionType`
   - Scrollgedrag: `horizontalScroll` (`auto|on|off`)
-  - Actiekolom: `actions` aanwezig ja/nee, `actionsColumnWidth`, sticky rechts bevestigen
+  - Actiekolom: alleen afwijkingen op default, bijvoorbeeld `actionsColumnWidth` of expliciet uitschakelen
   - Kolommen: `enableColumnResize`, `enableColumnCustomization`, volgorde/verbergen toegestaan ja/nee
-  - Filters/export: `enableColumnFilters`, `searchEnabled`, `exportEnabled`
+  - Filters/export: alleen afwijkingen op default, plus `searchEnabled`
   - Paginering: standaard `rowsPerPage`, toegestane `rowsOptions`, `Alle` toegestaan ja/nee
   - Default breedtes: per kolom `width`, `minWidth`, eventueel `widthWeight`
-  - Persistente voorkeuren: wel/niet opslaan per user/device
+  - Persistente voorkeuren: alleen uitvragen bij expliciete wens om af te wijken
 - Als de gebruiker niet alle keuzes aanlevert:
   - Eerst gericht navragen.
   - Daarna pas bouwen met expliciet vastgelegde defaults.
+
+## Dropdown widget-keuze (verplicht)
+- Bij elke **nieuwe dropdown** moet de agent eerst expliciet het widget-type vastleggen vóór implementatie.
+- Toegestane standaardtypes:
+  - `ComboboxPartialMatchingWidget` (selectie met typen/partial match)
+  - `ComboboxMultiSelectFilterWidget` (meerdere selectie-opties met filter-checkboxes)
+- Zonder expliciete keuze: **altijd eerst navragen** met simpele opties.
+- Vastleggen in code-review/oplevering:
+  - gekozen widget-type
+  - reden van keuze
+  - of het single-select of multi-select gedrag is
+- Toekomstvast:
+  - nieuwe dropdown-widgets mogen worden toegevoegd als nieuw type, maar bestaande types niet stilzwijgend vervangen.
+  - bij een nieuw type altijd eerst naam + doel + gebruikssituatie bevestigen.
 
 ## Database notes
 - Views live in `sql/views/`. Tables live in `sql/tables/`.

@@ -25,6 +25,21 @@ export function parseWidthToPixels(widthValue) {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
+function estimateHeaderContentWidth(column) {
+  const labelLength = String(column.label || column.key || "").length;
+  const charWidth = 8.4;
+  const horizontalPadding = 32; // th left/right padding within header cell
+  const sortIconRoom = column.sortable === false ? 0 : 20;
+  const filterIconRoom = column.filterable === false ? 0 : 20;
+  const resizeHandleRoom = 12;
+  const safetyGap = 12;
+
+  return Math.max(
+    80,
+    Math.round(labelLength * charWidth + horizontalPadding + sortIconRoom + filterIconRoom + resizeHandleRoom + safetyGap)
+  );
+}
+
 function estimateColumnWidth(column) {
   const normalizedWidth = normalizeWidthValue(column.width);
   const explicitWidthPx = parseWidthToPixels(normalizedWidth);
@@ -38,11 +53,11 @@ function estimateColumnWidth(column) {
     return minimumWidthPx;
   }
 
-  const labelLength = String(column.label || column.key || "").length;
+  const headerContentWidth = estimateHeaderContentWidth(column);
   const widthWeight = Number(column.widthWeight);
   const weightMultiplier = Number.isFinite(widthWeight) && widthWeight > 0 ? widthWeight : 1;
-  const estimated = (64 + labelLength * 9) * weightMultiplier;
-  return Math.max(120, Math.min(420, estimated));
+  const weightedEstimate = headerContentWidth * weightMultiplier;
+  return Math.max(headerContentWidth, Math.round(weightedEstimate));
 }
 
 function getColumnMinimumWidth(column) {
@@ -52,23 +67,21 @@ function getColumnMinimumWidth(column) {
     return explicitWidthPx;
   }
 
+  const headerContentWidth = estimateHeaderContentWidth(column);
   const normalizedMinWidth = normalizeWidthValue(column.minWidth);
   const minimumWidthPx = parseWidthToPixels(normalizedMinWidth);
   if (minimumWidthPx !== null) {
-    return minimumWidthPx;
+    return Math.max(headerContentWidth, minimumWidthPx);
   }
 
   return Math.max(
     48,
-    Math.min(
-      240,
-      estimateColumnWidth({
-        ...column,
-        width: undefined,
-        minWidth: undefined,
-        widthWeight: 1,
-      })
-    )
+    estimateColumnWidth({
+      ...column,
+      width: undefined,
+      minWidth: undefined,
+      widthWeight: 1,
+    })
   );
 }
 

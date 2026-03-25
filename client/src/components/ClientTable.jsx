@@ -28,12 +28,12 @@ export default function ClientTableWrapper({
   title,
   columns,
   data,
-  actions,
+  actions = [],
   searchEnabled = true,
   rowsPerPage = 10,
   rowsOptions = [5, 10, 25, 50, 100],
   enableAlle = true,
-  exportEnabled = false,
+  exportEnabled = true,
   enableDragDrop = false,
   enableColumnFilters = true,
   enableRowClickAction = false,
@@ -41,12 +41,20 @@ export default function ClientTableWrapper({
   horizontalScroll = "auto",
   actionsColumnWidth = 132,
   enableColumnResize = true,
-  enableColumnCustomization = false,
+  enableColumnCustomization = true,
   noDataMessage = "Geen data beschikbaar",
   onRowReorder,
 }) {
   const instanceRef = useRef(null);
+  const activeTableIdRef = useRef(null);
   const containerRef = useRef(null);
+  const hasActionsColumn = actions !== false && actions !== null;
+  const actionsConfig = useMemo(() => {
+    if (!hasActionsColumn) {
+      return null;
+    }
+    return Array.isArray(actions) ? actions : [];
+  }, [actions, hasActionsColumn]);
 
   const columnKeys = useMemo(() => columns.map((column) => column.key), [columns]);
   const initialPreferences = useMemo(() => readTablePreferences(tableId), [tableId]);
@@ -109,12 +117,13 @@ export default function ClientTableWrapper({
   const hasColumnPreferenceChanges = hasHiddenColumns || hasCustomColumnOrder || hasColumnWidthOverrides;
 
   const columnWidthStyles = useMemo(
-    () => buildColumnWidthStyles(displayColumns, actions ? actionsColumnWidthPx : 0, hasColumnWidthOverrides),
-    [displayColumns, actions, actionsColumnWidthPx, hasColumnWidthOverrides]
+    () =>
+      buildColumnWidthStyles(displayColumns, hasActionsColumn ? actionsColumnWidthPx : 0, hasColumnWidthOverrides),
+    [displayColumns, hasActionsColumn, actionsColumnWidthPx, hasColumnWidthOverrides]
   );
   const minimumTableWidth = useMemo(
-    () => calculateMinimumTableWidth(displayColumns, actions ? actionsColumnWidthPx : 0),
-    [displayColumns, actions, actionsColumnWidthPx]
+    () => calculateMinimumTableWidth(displayColumns, hasActionsColumn ? actionsColumnWidthPx : 0),
+    [displayColumns, hasActionsColumn, actionsColumnWidthPx]
   );
 
   const effectiveRowsPerPage = useMemo(() => {
@@ -287,7 +296,7 @@ export default function ClientTableWrapper({
   useEffect(() => {
     const options = {
       columns: displayColumns,
-      actions: actions || null,
+      actions: actionsConfig,
       rowsPerPage: effectiveRowsPerPage,
       rowsOptions,
       enableSearch: searchEnabled,
@@ -301,9 +310,18 @@ export default function ClientTableWrapper({
       onRowReorder: onRowReorder || undefined,
     };
 
-    if (!instanceRef.current) {
+    const previousTableId = activeTableIdRef.current;
+    const hasTableIdChanged = Boolean(previousTableId) && previousTableId !== tableId;
+
+    if (hasTableIdChanged && window[`${previousTableId}_instance`]) {
+      delete window[`${previousTableId}_instance`];
+      instanceRef.current = null;
+    }
+
+    if (!instanceRef.current || hasTableIdChanged) {
       instanceRef.current = new ClientTable(tableId, data, options);
       window[`${tableId}_instance`] = instanceRef.current;
+      activeTableIdRef.current = tableId;
       return;
     }
 
@@ -313,7 +331,7 @@ export default function ClientTableWrapper({
     tableId,
     data,
     displayColumns,
-    actions,
+    actionsConfig,
     effectiveRowsPerPage,
     rowsOptions,
     searchEnabled,
@@ -336,13 +354,24 @@ export default function ClientTableWrapper({
     return () => document.removeEventListener("click", handler);
   }, [tableId]);
 
+  useEffect(() => {
+    return () => {
+      const currentTableId = activeTableIdRef.current;
+      if (currentTableId && window[`${currentTableId}_instance`]) {
+        delete window[`${currentTableId}_instance`];
+      }
+      instanceRef.current = null;
+      activeTableIdRef.current = null;
+    };
+  }, []);
+
   return (
     <div className="table-container" id={`${tableId}-container`} ref={containerRef}>
       {(title || searchEnabled || exportEnabled || enableColumnCustomization) && (
         <div className="table-header">
           {title && <h2 className="table-title">{title}</h2>}
           <div className="table-controls">
-            {enableColumnCustomization && !actions && (
+            {enableColumnCustomization && !hasActionsColumn && (
               <ColumnsControl
                 tableId={tableId}
                 columnState={columnState}
@@ -437,8 +466,9 @@ export default function ClientTableWrapper({
           tableId={tableId}
           displayColumns={displayColumns}
           columnWidthStyles={columnWidthStyles}
-          actions={actions}
+          actions={hasActionsColumn}
           actionsColumnWidthCss={actionsColumnWidthCss}
+          hasColumnWidthOverrides={hasColumnWidthOverrides}
           enableColumnFilters={enableColumnFilters}
           enableColumnResize={enableColumnResize}
           startColumnResize={startColumnResize}

@@ -29,7 +29,14 @@
 }
 
 .standard-table col.table-filler-col {
+    width: 0;
+    min-width: 0;
+    max-width: 0;
+}
+
+.standard-table--has-width-overrides col.table-filler-col {
     width: auto;
+    max-width: none;
 }
 
 .table-responsive--scroll .standard-table {
@@ -383,6 +390,7 @@ body .standard-table .actions-header {
     z-index: 8;
     background: var(--table-header-bg);
     box-shadow: -8px 0 12px -12px rgba(0, 0, 0, 0.45);
+    overflow: visible;
 }
 
 body .standard-table .actions-header .actions-header-content {
@@ -404,6 +412,19 @@ body .standard-table .actions-column {
     z-index: 6;
     background: var(--table-row-bg);
     box-shadow: -8px 0 12px -12px rgba(0, 0, 0, 0.45);
+    overflow: visible;
+}
+
+body .standard-table .actions-header::before,
+body .standard-table .actions-column::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background: var(--table-border-tint);
+    pointer-events: none;
 }
 
 body .standard-table tbody tr:hover .actions-column {
@@ -412,9 +433,16 @@ body .standard-table tbody tr:hover .actions-column {
 
 body .standard-table .table-filler-header,
 body .standard-table .table-filler-cell {
-    width: auto;
+    width: 0;
     min-width: 0;
+    max-width: 0;
     padding: 0 !important;
     background: transparent;
+}
+
+body .standard-table--has-width-overrides .table-filler-header,
+body .standard-table--has-width-overrides .table-filler-cell {
+    width: auto;
+    max-width: none;
 }
 

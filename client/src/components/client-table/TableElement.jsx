@@ -6,6 +6,7 @@ export default function TableElement({
   columnWidthStyles,
   actions,
   actionsColumnWidthCss,
+  hasColumnWidthOverrides,
   enableColumnFilters,
   enableColumnResize,
   startColumnResize,
@@ -18,8 +19,12 @@ export default function TableElement({
   onMoveColumnBefore,
   onResetPreferences,
 }) {
+  const tableClassName = `standard-table ${
+    hasColumnWidthOverrides ? "standard-table--has-width-overrides" : "standard-table--auto-distribute"
+  }`;
+
   return (
-    <table className="standard-table" id={tableId}>
+    <table className={tableClassName} id={tableId}>
       <colgroup>
         {displayColumns.map((column, index) => (
           <col key={`${tableId}-col-${column.key}`} style={columnWidthStyles[index] || undefined} />

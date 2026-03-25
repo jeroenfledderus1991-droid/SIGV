@@ -1,4 +1,4 @@
-import { postJsonSafe } from "../api.js";
+import { postJson } from "../api.js";
 const MAX_EVENTS_PER_SESSION = 40;
 const DEDUPE_WINDOW_MS = 30_000;
 const seenEvents = new Map();
@@ -79,7 +79,9 @@ async function report(payload) {
   const dedupeKey = `${payload.category}|${message}|${sourceUrl}`;
   if (shouldDropByDedupe(dedupeKey)) return;
   sentCount += 1;
-  await postJsonSafe("/system-errors/client", payload);
+  try {
+    await postJson("/system-errors/client", payload);
+  } catch {}
 }
 
 function parseConsoleArgs(args) {

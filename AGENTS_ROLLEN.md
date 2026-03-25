@@ -202,22 +202,37 @@ Resultaat van deze samenwerking:
 - Voeg de route toe in `client/src/App.jsx` en registreer een `navItems`-entry met de juiste `permissions`.
 - Hergebruik `ClientTable` voor lijstpagina's.
 - Bij elke nieuwe `ClientTable` is een settings-intake verplicht voordat er gebouwd wordt.
+- Deze `ClientTable` defaults zijn altijd aan, tenzij gebruiker expliciet anders vraagt:
+  - Actiekolom aanwezig en sticky rechts.
+  - Filters + export aanwezig.
+  - Voorkeuren (kolommen/rijen) opslaan per user/device.
 - Als settings ontbreken: eerst in simpele taal navragen met korte keuze-opties die direct in chat te beantwoorden zijn.
 - Zonder expliciete settings-keuze geen implementatie van de tabel starten.
 - Geen inline styles; CSS gaat in de juiste stijllaag (zie CSS-governance in `AGENTS.md`).
+- Bij elke nieuwe dropdown eerst widget-type kiezen en bevestigen:
+  - `ComboboxPartialMatchingWidget` (single-select met typen/partial match)
+  - `ComboboxMultiSelectFilterWidget` (multi-select met checkbox-filter)
+  - Bij onduidelijkheid altijd eerst navragen; niet zelf gokken.
 
 **Standaard vraagtemplate (simpele taal, direct kopieerbaar):**
 ```
 Voor deze tabel: kies per regel 1 optie (je mag alleen het nummer sturen).
 1. Klik op rij opent bewerken: 1) Ja 2) Nee
 2. Horizontale scrollbar: 1) Auto 2) Altijd aan 3) Uit
-3. Acties kolom rechts sticky: 1) Ja 2) Nee
-4. Kolommen verbergen/herordenen: 1) Ja 2) Nee
-5. Kolommen handmatig breder/smaller slepen: 1) Ja 2) Nee
-6. Standaard aantal rijen: 1) 10 2) 25 3) 50 4) Anders
-7. Rijen-opties in dropdown: 1) 10/25/50 2) 5/10/25/50/100 3) Anders
-8. Optie "Alle" tonen: 1) Ja 2) Nee
-9. Voorkeuren per user/device opslaan: 1) Ja 2) Nee
+3. Kolommen verbergen/herordenen: 1) Ja 2) Nee
+4. Kolommen handmatig breder/smaller slepen: 1) Ja 2) Nee
+5. Standaard aantal rijen: 1) 10 2) 25 3) 50 4) Anders
+6. Rijen-opties in dropdown: 1) 10/25/50 2) 5/10/25/50/100 3) Anders
+7. Optie "Alle" tonen: 1) Ja 2) Nee
+8. Afwijken van vaste defaults? 1) Nee 2) Ja, ik geef daarna per punt aan wat anders moet
+```
+
+**Standaard vraagtemplate voor nieuwe dropdowns (simpele taal):**
+```
+Voor deze dropdown: kies 1 optie.
+1. Partial matching combobox (1 keuze)
+2. Filter combobox (meerdere keuzes met vinkjes)
+3. Anders (ik beschrijf kort wat ik wil)
 ```
 
 **Checklist vóór oplevering:**
