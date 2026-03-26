@@ -8,18 +8,7 @@ function createAccessControl({
   setCsrfCookie,
   csrfCookieName,
   superAdminRoleName,
-  eesaSuperAdminEmail,
 }) {
-  function normalizeEmail(value) {
-    return String(value || "")
-      .trim()
-      .toLowerCase();
-  }
-
-  function isEesaSuperAdminEmail(value) {
-    return normalizeEmail(value) === eesaSuperAdminEmail;
-  }
-
   function isSuperAdminRoleName(value) {
     return String(value || "")
       .trim()
@@ -47,7 +36,7 @@ function createAccessControl({
       }
       req.user = {
         ...session.user,
-        is_super_admin: Boolean(session.user?.is_super_admin || isEesaSuperAdminEmail(session.user?.email)),
+        is_super_admin: Boolean(session.user?.is_super_admin),
       };
       req.sessionId = session.sessionId;
       if (config.csrfEnabled && !readCookie(req, csrfCookieName)) {
@@ -73,7 +62,7 @@ function createAccessControl({
 
   async function loadPermissions(req) {
     if (req.permissions) return req.permissions;
-    if (req.user?.is_super_admin || isEesaSuperAdminEmail(req.user?.email)) {
+    if (req.user?.is_super_admin) {
       req.permissions = { allowedPaths: ["*"], roles: ["super_admin"] };
       return req.permissions;
     }
@@ -146,7 +135,6 @@ function createAccessControl({
     requireAuth,
     loadPermissions,
     requirePermission,
-    isEesaSuperAdminEmail,
     isSuperAdminRoleName,
     getSuperAdminRoleId,
   };

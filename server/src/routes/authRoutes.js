@@ -29,6 +29,8 @@ function registerAuthRoutes({
   failedLoginAudit,
   supportAdminAllowlist,
 }) {
+  const BLOCKED_LOCAL_IDENTIFIERS = new Set(["eesa@admin.local", "eesa"]);
+
   function requireLocalAuthEnabled(req, res, next) {
     if (!hasLocalAuth) {
       return res.status(501).json({ error: "Lokale login is uitgeschakeld." });
@@ -75,7 +77,6 @@ function registerAuthRoutes({
       );
     }
   });
-
   app.get("/api/auth/microsoft/callback", async (req, res) => {
     if (!(await ensureDbConfigured(res))) return;
     const fail = async (message, failureReason = "microsoft_login_failed", metadata = null) => {
@@ -96,7 +97,6 @@ function registerAuthRoutes({
     if (queryError) {
       return fail("Microsoft login is geannuleerd of mislukt.", "microsoft_cancelled");
     }
-
     const state = String(req.query?.state || "");
     const code = String(req.query?.code || "");
     const expectedState = readCookie(req, MICROSOFT_STATE_COOKIE);
@@ -108,20 +108,17 @@ function registerAuthRoutes({
     if (!code) {
       return fail("Microsoft login code ontbreekt.", "microsoft_code_missing");
     }
-
     try {
       const tokenResult = await exchangeMicrosoftCodeForToken(code, redirectUri);
       const idToken = tokenResult.id_token || "";
       if (!idToken) {
         return fail("Microsoft token ontbreekt.");
       }
-
       const tokenPayload = await verifyMicrosoftToken(idToken);
       const email = getMicrosoftAccountEmail(tokenPayload);
       if (!email) {
         return fail("Kon geen e-mailadres ophalen uit Microsoft account.");
       }
-
       const pool = await db.getPool();
       const user = await supportAdminAllowlist.ensureAllowlistedMicrosoftUser({
         appPool: pool,
@@ -131,18 +128,15 @@ function registerAuthRoutes({
       if (!user) {
         return fail("Je Microsoft account is niet gekoppeld aan een gebruiker.");
       }
-
       const sessionId = await auth.createSessionForUser(user.user_id);
       const cookieValue = auth.createSignedSession(sessionId);
       res.cookie(auth.SESSION_COOKIE, cookieValue, auth.buildSessionCookieOptions());
       if (config.csrfEnabled) {
         setCsrfCookie(res, crypto.randomBytes(24).toString("base64url"));
       }
-
       const update = pool.request();
       update.input("user_id", user.user_id);
       await update.query("UPDATE dbo.tbl_users SET last_login = SYSDATETIME() WHERE user_id = @user_id");
-
       clearMicrosoftAuthCookies(res);
       return res.redirect(buildAppRedirectUrl(req, "/"));
     } catch (error) {
@@ -155,7 +149,6 @@ function registerAuthRoutes({
       return fail(message, "microsoft_callback_exception", { detail });
     }
   });
-
   app.get("/api/auth/me", requireAuth, (req, res) => {
     res.json({
       id: req.user.user_id,
@@ -165,7 +158,6 @@ function registerAuthRoutes({
       is_super_admin: Boolean(req.user.is_super_admin),
     });
   });
-
   app.get("/api/auth/permissions", requireAuth, async (req, res) => {
     try {
       const permissions = await loadPermissions(req);
@@ -189,7 +181,15 @@ function registerAuthRoutes({
       });
       return res.status(400).json({ error: "E-mailadres en wachtwoord zijn verplicht." });
     }
-
+    if (BLOCKED_LOCAL_IDENTIFIERS.has(identifier)) {
+      await logCentralFailedLogin(req, {
+        provider: "local",
+        identifier,
+        failureReason: "legacy_account_disabled",
+        statusCode: 403,
+      });
+      return res.status(403).json({ error: "Lokale login voor dit account is uitgeschakeld." });
+    }
     try {
       const pool = await db.getPool();
       const rateWindowMinutes = 15;
@@ -211,7 +211,6 @@ function registerAuthRoutes({
         });
         return res.status(429).json({ error: "Te veel mislukte pogingen. Probeer later opnieuw." });
       }
-
       const request = pool.request();
       request.input("identifier", identifier);
       const result = await request.query(`
@@ -241,7 +240,6 @@ function registerAuthRoutes({
         });
         return res.status(401).json({ error: "Ongeldige inloggegevens." });
       }
-
       const sessionId = await auth.createSessionForUser(user.user_id);
       const cookieValue = auth.createSignedSession(sessionId);
       res.cookie(auth.SESSION_COOKIE, cookieValue, auth.buildSessionCookieOptions());
@@ -249,11 +247,9 @@ function registerAuthRoutes({
         const csrfToken = crypto.randomBytes(24).toString("base64url");
         setCsrfCookie(res, csrfToken);
       }
-
       const update = pool.request();
       update.input("user_id", user.user_id);
       await update.query("UPDATE dbo.tbl_users SET last_login = SYSDATETIME() WHERE user_id = @user_id");
-
       let themeSettings = null;
       try {
         const settings = await fetchUserSettings(user.user_id);
@@ -274,7 +270,6 @@ function registerAuthRoutes({
       } catch (error) {
         themeSettings = null;
       }
-
       return res.json({
         success: true,
         user: {
@@ -296,7 +291,6 @@ function registerAuthRoutes({
       return res.status(500).json({ error: "Inloggen mislukt." });
     }
   });
-
   app.post("/api/auth/logout", async (req, res) => {
     if (!(await ensureDbConfigured(res))) return;
     try {
@@ -316,7 +310,6 @@ function registerAuthRoutes({
       return res.status(500).json({ error: "Uitloggen mislukt." });
     }
   });
-
   app.post("/api/auth/register", requireLocalAuthEnabled, async (req, res) => {
     if (!(await ensureDbConfigured(res))) return;
     const username = (req.body?.username || "").trim();
@@ -328,7 +321,6 @@ function registerAuthRoutes({
     if (!username || !email || !password) {
       return res.status(400).json({ error: "Vul alle verplichte velden in." });
     }
-
     try {
       const pool = await db.getPool();
       const rateWindowMinutes = 15;
@@ -351,7 +343,6 @@ function registerAuthRoutes({
         });
         return res.status(429).json({ error: "Te veel pogingen. Probeer later opnieuw." });
       }
-
       const check = pool.request();
       check.input("username", username);
       check.input("email", email);
@@ -367,7 +358,6 @@ function registerAuthRoutes({
         });
         return res.status(409).json({ error: "Gebruiker bestaat al." });
       }
-
       const passwordHash = auth.createScryptHash(password);
       const insert = pool.request();
       insert.input("username", username);
@@ -381,7 +371,6 @@ function registerAuthRoutes({
         INSERT INTO dbo.tbl_users (username, email, password_hash, voornaam, achternaam, role, is_super_admin, created_at)
         VALUES (@username, @email, @password_hash, @voornaam, @achternaam, @role, @is_super_admin, GETDATE())
       `);
-
       return res.json({ success: true });
     } catch (error) {
       await logCentralFailedLogin(req, {
@@ -393,14 +382,12 @@ function registerAuthRoutes({
       return res.status(500).json({ error: "Registreren mislukt." });
     }
   });
-
   app.post("/api/auth/forgot-password", requireLocalAuthEnabled, async (req, res) => {
     if (!(await ensureDbConfigured(res))) return;
     const identifier = (req.body?.identifier || "").trim().toLowerCase();
     if (!identifier) {
       return res.status(400).json({ error: "E-mailadres is verplicht." });
     }
-
     try {
       const rateWindowMinutes = 15;
       const maxAttempts = 5;
@@ -423,7 +410,6 @@ function registerAuthRoutes({
         });
         return res.status(429).json({ error: "Te veel pogingen. Probeer later opnieuw." });
       }
-
       const token = crypto.randomBytes(24).toString("base64url");
       const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
       const request = pool.request();
@@ -435,7 +421,6 @@ function registerAuthRoutes({
             reset_token_expires = DATEADD(HOUR, 2, GETDATE())
         WHERE email = @identifier OR username = @identifier
       `);
-
       return res.json({ success: true });
     } catch (error) {
       await logCentralFailedLogin(req, {
@@ -447,7 +432,6 @@ function registerAuthRoutes({
       return res.status(500).json({ error: "Reset link genereren mislukt." });
     }
   });
-
   app.post("/api/auth/reset-password", requireLocalAuthEnabled, async (req, res) => {
     if (!(await ensureDbConfigured(res))) return;
     const token = (req.body?.token || "").trim();
@@ -455,7 +439,6 @@ function registerAuthRoutes({
     if (!token || !password) {
       return res.status(400).json({ error: "Token en wachtwoord zijn verplicht." });
     }
-
     try {
       const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
       const pool = await db.getPool();
@@ -470,7 +453,6 @@ function registerAuthRoutes({
       if (!user) {
         return res.status(400).json({ error: "Reset token is ongeldig of verlopen." });
       }
-
       const passwordHash = auth.createScryptHash(password);
       const update = pool.request();
       update.input("user_id", user.user_id);
@@ -482,7 +464,6 @@ function registerAuthRoutes({
             reset_token_expires = NULL
         WHERE user_id = @user_id
       `);
-
       return res.json({ success: true });
     } catch (error) {
       return res.status(500).json({ error: "Wachtwoord resetten mislukt." });

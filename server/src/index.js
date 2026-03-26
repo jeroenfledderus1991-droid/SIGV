@@ -196,7 +196,6 @@ const {
   requireAuth,
   loadPermissions,
   requirePermission,
-  isEesaSuperAdminEmail,
   isSuperAdminRoleName,
   getSuperAdminRoleId,
 } = createAccessControl({
@@ -209,7 +208,6 @@ const {
   setCsrfCookie,
   csrfCookieName: CSRF_COOKIE,
   superAdminRoleName: SUPER_ADMIN_ROLE_NAME,
-  eesaSuperAdminEmail: EESA_SUPER_ADMIN_EMAIL,
 });
 
 const {
@@ -312,9 +310,7 @@ registerAccountRoutes({
   ensureDbConfigured,
   requireAuth,
   requirePermission,
-  EESA_SUPER_ADMIN_EMAIL,
   SUPER_ADMIN_ROLE_NAME,
-  isEesaSuperAdminEmail,
   isSuperAdminRoleName,
   getSuperAdminRoleId,
 });

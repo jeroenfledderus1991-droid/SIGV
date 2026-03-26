@@ -4,9 +4,7 @@ function registerAccountRoutes({
   ensureDbConfigured,
   requireAuth,
   requirePermission,
-  EESA_SUPER_ADMIN_EMAIL,
   SUPER_ADMIN_ROLE_NAME,
-  isEesaSuperAdminEmail,
   isSuperAdminRoleName,
   getSuperAdminRoleId,
 }) {
@@ -17,7 +15,6 @@ function registerAccountRoutes({
     try {
       const pool = await db.getPool();
       const request = pool.request();
-      request.input("eesa_email", EESA_SUPER_ADMIN_EMAIL);
       request.input("super_admin_name", SUPER_ADMIN_ROLE_NAME);
       request.input("support_admin_role", SUPPORT_ADMIN_INTERNAL_ROLE);
       const result = await request.query(`
@@ -41,8 +38,7 @@ function registerAccountRoutes({
           WHERE ur.user_id = u.user_id
           ORDER BY ur.role_volgorde
         ) r
-        WHERE LOWER(u.email) <> LOWER(@eesa_email)
-          AND LOWER(COALESCE(u.role, '')) <> LOWER(@support_admin_role)
+        WHERE LOWER(COALESCE(u.role, '')) <> LOWER(@support_admin_role)
         ORDER BY u.username
       `);
       res.json(result.recordset || []);
@@ -95,14 +91,11 @@ function registerAccountRoutes({
       if (!targetUser) {
         return res.status(404).json({ error: "Gebruiker niet gevonden." });
       }
-      if (isEesaSuperAdminEmail(targetUser.email)) {
-        return res.status(403).json({ error: "Dit account kan niet worden aangepast." });
-      }
       if (String(targetUser.role || "").toLowerCase() === SUPPORT_ADMIN_INTERNAL_ROLE) {
         return res.status(403).json({ error: "Dit support admin account kan niet worden aangepast." });
       }
-      if (wantsSuperAdminChange && !isEesaSuperAdminEmail(req.user?.email)) {
-        return res.status(403).json({ error: "Alleen EESA mag Super Admin toewijzen of intrekken." });
+      if (wantsSuperAdminChange && !req.user?.is_super_admin) {
+        return res.status(403).json({ error: "Alleen een Super Admin mag Super Admin toewijzen of intrekken." });
       }
 
       const nextIsSuperAdmin = wantsSuperAdminChange
@@ -175,9 +168,6 @@ function registerAccountRoutes({
       const targetUser = userResult.recordset[0];
       if (!targetUser) {
         return res.status(404).json({ error: "Gebruiker niet gevonden." });
-      }
-      if (isEesaSuperAdminEmail(targetUser.email)) {
-        return res.status(403).json({ error: "Dit account kan niet worden verwijderd." });
       }
       if (String(targetUser.role || "").toLowerCase() === SUPPORT_ADMIN_INTERNAL_ROLE) {
         return res.status(403).json({ error: "Dit support admin account kan niet worden verwijderd." });

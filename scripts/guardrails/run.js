@@ -400,10 +400,25 @@ function checkSqlStringConcatenationSafety() {
   return warnings;
 }
 
-function checkApiAuthMiddleware() {
-  const files = walk(path.join(ROOT, "server", "src", "routes"), (f) => /\.(js|ts)$/i.test(f));
+function checkApiEndpointIntegrity() {
+  const scanRoots = [
+    path.join(ROOT, "server", "src", "index.js"),
+    path.join(ROOT, "server", "src", "routes"),
+  ];
+  const files = [];
+  for (const root of scanRoots) {
+    if (!fs.existsSync(root)) continue;
+    const stat = fs.statSync(root);
+    if (stat.isDirectory()) {
+      walk(root, (f) => /\.(js|ts)$/i.test(f), files);
+    } else if (stat.isFile()) {
+      files.push(root);
+    }
+  }
+
   const warnings = [];
-  const publicPrefixes = [
+  const routeOwners = new Map();
+  const publicExact = new Set([
     "/api/health",
     "/api/bootstrap",
     "/api/settings",
@@ -411,11 +426,9 @@ function checkApiAuthMiddleware() {
     "/api/auth/register",
     "/api/auth/forgot-password",
     "/api/auth/reset-password",
-    "/api/auth/microsoft/start",
-    "/api/auth/microsoft/callback",
-    "/api/db/health",
-    "/api/db/info",
-  ];
+    "/api/auth/logout",
+  ]);
+  const publicPrefixes = ["/api/auth/microsoft/"];
   const mustAuthPrefixes = [
     "/api/accounts",
     "/api/roles",
@@ -423,28 +436,51 @@ function checkApiAuthMiddleware() {
     "/api/feature-flags",
     "/api/user-settings",
     "/api/profile",
+    "/api/system-errors",
+    "/api/db/",
     "/api/auth/me",
     "/api/auth/permissions",
   ];
+  const mustPermissionPrefixes = ["/api/accounts", "/api/roles", "/api/stamgegevens", "/api/feature-flags", "/api/db/"];
 
   for (const file of files) {
     const rel = toPosix(path.relative(ROOT, file));
     const lines = fs.readFileSync(file, "utf8").split(/\r?\n/);
-    for (const line of lines) {
+    lines.forEach((line, idx) => {
       const m = line.match(/app\.(get|post|put|delete)\("([^"]+)"/);
-      if (!m) continue;
+      if (!m) return;
+      const method = m[1].toUpperCase();
       const routePath = m[2];
-      if (!routePath.startsWith("/api/")) continue;
-      if (publicPrefixes.some((p) => routePath.startsWith(p))) continue;
+      if (!routePath.startsWith("/api/")) return;
 
-      if (mustAuthPrefixes.some((p) => routePath.startsWith(p)) && !line.includes("requireAuth")) {
-        warnings.push(`${rel}: ${routePath} is missing requireAuth`);
+      const routeKey = `${method} ${routePath}`;
+      const owner = `${rel}:${idx + 1}`;
+      if (routeOwners.has(routeKey)) {
+        warnings.push(`${owner}: duplicate API route detected (${routeKey}), first seen at ${routeOwners.get(routeKey)}`);
+      } else {
+        routeOwners.set(routeKey, owner);
       }
-      if (line.includes("requirePermission(") && !line.includes("requireAuth")) {
-        warnings.push(`${rel}: ${routePath} uses requirePermission without requireAuth`);
+
+      if (/\s/.test(routePath)) {
+        warnings.push(`${owner}: API route contains whitespace (${routePath})`);
       }
-    }
+
+      const hasRequireAuth = line.includes("requireAuth");
+      const hasRequirePermission = line.includes("requirePermission(");
+      const isPublic = publicExact.has(routePath) || publicPrefixes.some((prefix) => routePath.startsWith(prefix));
+
+      if (!isPublic && mustAuthPrefixes.some((prefix) => routePath.startsWith(prefix)) && !hasRequireAuth) {
+        warnings.push(`${owner}: ${routePath} is missing requireAuth`);
+      }
+      if (mustPermissionPrefixes.some((prefix) => routePath.startsWith(prefix)) && !hasRequirePermission) {
+        warnings.push(`${owner}: ${routePath} is missing requirePermission(...)`);
+      }
+      if (hasRequirePermission && !hasRequireAuth) {
+        warnings.push(`${owner}: ${routePath} uses requirePermission without requireAuth`);
+      }
+    });
   }
+
   return warnings;
 }
 
@@ -639,13 +675,13 @@ function main() {
     if (ENFORCE) hasError = true;
   }
 
-  const apiAuthWarnings = checkApiAuthMiddleware();
-  printSection("API Auth Middleware");
-  if (!apiAuthWarnings.length) {
-    console.log("OK: no obvious auth middleware issues detected.");
+  const apiEndpointWarnings = checkApiEndpointIntegrity();
+  printSection("API Endpoint Integrity");
+  if (!apiEndpointWarnings.length) {
+    console.log("OK: endpoint auth/permission/duplicate checks passed.");
   } else {
-    console.log("WARNING: potential auth middleware issues:");
-    for (const w of apiAuthWarnings) console.log(`- ${w}`);
+    console.log("WARNING: potential API endpoint integrity issues:");
+    for (const w of apiEndpointWarnings) console.log(`- ${w}`);
     if (ENFORCE) hasError = true;
   }
 

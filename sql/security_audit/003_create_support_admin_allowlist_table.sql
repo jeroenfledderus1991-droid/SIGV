@@ -75,3 +75,30 @@ BEGIN
     );
 END;
 GO
+
+IF NOT EXISTS (
+    SELECT 1
+    FROM dbo.tbl_support_admin_allowlist
+    WHERE email_normalized = LOWER('steven@expertexcel.nl')
+)
+BEGIN
+    INSERT INTO dbo.tbl_support_admin_allowlist (
+        email,
+        display_name,
+        role_code,
+        is_active,
+        notes,
+        created_by,
+        updated_by
+    )
+    VALUES (
+        'steven@expertexcel.nl',
+        'Steven (seed)',
+        'support_admin',
+        1,
+        'Seed record for support admin allowlist test',
+        'seed-script',
+        'seed-script'
+    );
+END;
+GO
