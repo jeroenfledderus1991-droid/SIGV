@@ -67,7 +67,7 @@ GO
 
 IF NOT EXISTS (SELECT 1 FROM dbo.tbl_feature_flags WHERE flag_name = 'ENABLE_ADMIN_AUTO_LOGIN')
     INSERT INTO dbo.tbl_feature_flags (flag_name, enabled, page_key, description)
-    VALUES ('ENABLE_ADMIN_AUTO_LOGIN', 0, 'SYSTEM', 'Log automatisch in als superadmin (EESA)');
+    VALUES ('ENABLE_ADMIN_AUTO_LOGIN', 0, 'SYSTEM', 'Log automatisch in als beheeraccount');
 GO
 
 IF NOT EXISTS (SELECT 1 FROM dbo.tbl_feature_flags WHERE flag_name = 'ENABLE_USER_AUTO_LOGIN')

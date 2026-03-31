@@ -115,6 +115,9 @@ This file captures the local rules and patterns for this template. Keep changes 
    - Use `ClientTable` with actions wired to window handlers (see `client/src/pages/Stamgegevens.jsx`).
 
 ## ClientTable settings intake (verplicht)
+- Component-keuze:
+  - Standaard altijd `client/src/components/ClientTable.jsx`.
+  - Gebruik `client/src/components/ClientTableEditable.jsx` alleen als de gebruiker expliciet vraagt om inline wijzigen in de tabel zelf i.p.v. via modal/scherm.
 - Bij elke **nieuwe** tabel (`ClientTable`) moet de agent **altijd eerst** de instelbare tabelsettings uitvragen en bevestigen vóór implementatie.
 - Vaste defaults (altijd aan, alleen wijzigen bij expliciete user-vraag):
   - Actiekolom altijd aanwezig en sticky rechts (`actions` + sticky gedrag).
@@ -132,6 +135,10 @@ This file captures the local rules and patterns for this template. Keep changes 
 - Als de gebruiker niet alle keuzes aanlevert:
   - Eerst gericht navragen.
   - Daarna pas bouwen met expliciet vastgelegde defaults.
+- Extra intake voor `ClientTableEditable` (alleen bij expliciete inline-edit wens):
+  - Welke kolommen zijn bewerkbaar (`editableColumns` of `column.editable`)?
+  - Nieuwe regels toegestaan ja/nee (`enableRowAdd`)?
+  - Callbackgedrag bij wijzigen/toevoegen (`onDataChange`, `onAddRow`)?
 
 ## Dropdown widget-keuze (verplicht)
 - Bij elke **nieuwe dropdown** moet de agent eerst expliciet het widget-type vastleggen vóór implementatie.
@@ -156,3 +163,4 @@ This file captures the local rules and patterns for this template. Keep changes 
 - Session auth and CSRF are enforced in Express (security + route modules, wired in `server/src/index.js`).
 - App settings and feature flags are served from `/api/settings`.
 - React uses `useAuth`, `usePermissions`, `useThemeSettings`, `useAppSettings` hooks; keep that flow intact.
+

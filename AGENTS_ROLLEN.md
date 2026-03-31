@@ -201,7 +201,9 @@ Resultaat van deze samenwerking:
 - Gebruik uitsluitend `getJson`, `postJson`, `putJson`, `deleteJson` uit `client/src/api.js`.
 - Voeg de route toe in `client/src/App.jsx` en registreer een `navItems`-entry met de juiste `permissions`.
 - Hergebruik `ClientTable` voor lijstpagina's.
+- Gebruik `ClientTableEditable` alleen als de gebruiker expliciet vraagt om inline wijzigen in de tabel zelf (niet via modal).
 - Bij elke nieuwe `ClientTable` is een settings-intake verplicht voordat er gebouwd wordt.
+- Bij gebruik van `ClientTableEditable`: leg expliciet vast welke kolommen bewerkbaar zijn en of nieuwe regels toevoegen aan staat.
 - Deze `ClientTable` defaults zijn altijd aan, tenzij gebruiker expliciet anders vraagt:
   - Actiekolom aanwezig en sticky rechts.
   - Filters + export aanwezig.

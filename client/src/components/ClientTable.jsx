@@ -42,6 +42,8 @@ export default function ClientTableWrapper({
   actionsColumnWidth = 132,
   enableColumnResize = true,
   enableColumnCustomization = true,
+  enableInlineEdit = false, enableRowAdd = false, editableColumns = {},
+  onDataChange, onAddRow, newRowDefaults = {},
   noDataMessage = "Geen data beschikbaar",
   onRowReorder,
 }) {
@@ -306,6 +308,8 @@ export default function ClientTableWrapper({
       enableColumnFilters,
       enableRowClickAction,
       rowClickActionType,
+      enableInlineEdit, enableRowAdd, editableColumns,
+      onDataChange, onAddRow, newRowDefaults,
       noDataMessage,
       onRowReorder: onRowReorder || undefined,
     };
@@ -339,6 +343,8 @@ export default function ClientTableWrapper({
     enableColumnFilters,
     enableRowClickAction,
     rowClickActionType,
+    enableInlineEdit, enableRowAdd, editableColumns,
+    onDataChange, onAddRow, newRowDefaults,
     noDataMessage,
     onRowReorder,
   ]);

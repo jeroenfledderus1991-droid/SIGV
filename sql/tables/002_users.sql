@@ -58,26 +58,3 @@ CREATE TABLE dbo.tbl_active_sessions (
 );
 GO
 
--- Seed superadmin (wachtwoord: kRyx2159S?;KWkkj)
-IF NOT EXISTS (SELECT 1 FROM dbo.tbl_users WHERE username = 'EESA')
-BEGIN
-    INSERT INTO dbo.tbl_users (username, email, password_hash, voornaam, achternaam, role, is_super_admin, created_at)
-    VALUES ('EESA','eesa@admin.local','scrypt:32768:8:1$5K7elyAfQYEXrPx2$a3038353df8e3afa16049ec88cf1a733617b0ea7f635af9e54357a3678b36c7767615dabefff4ae7ce46a3b751f2f5e35734124a4e0e73bf81edad3c270979cd','Expert','Excel','superadmin',1,GETDATE());
-END
-GO
-
--- Koppeling EESA -> admin rol
-IF EXISTS (SELECT 1 FROM dbo.tbl_users WHERE username='EESA')
-   AND EXISTS (SELECT 1 FROM dbo.tbl_roles WHERE naam='admin')
-   AND NOT EXISTS (
-       SELECT 1 FROM dbo.tbl_user_roles ur
-       JOIN dbo.tbl_users u ON u.user_id = ur.user_id
-       JOIN dbo.tbl_roles r ON r.id = ur.role_id
-       WHERE u.username='EESA' AND r.naam='admin'
-   )
-BEGIN
-    INSERT INTO dbo.tbl_user_roles (user_id, role_id)
-    SELECT u.user_id, r.id FROM dbo.tbl_users u CROSS JOIN dbo.tbl_roles r
-    WHERE u.username='EESA' AND r.naam='admin';
-END
-GO

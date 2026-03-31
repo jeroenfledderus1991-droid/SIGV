@@ -1,8 +1,10 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { postJson } from "../../api";
+import { APP_NAME, BRAND_LOGO_SRC, BRAND_NAME } from "../../config/branding.js";
 
 export default function Register() {
+  const [logoFailed, setLogoFailed] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [error, setError] = useState("");
@@ -42,11 +44,15 @@ export default function Register() {
     <div className="auth-page">
       <div className="auth-card auth-card-wide">
         <div className="auth-header">
-          <div className="auth-logo auth-logo-circle">
-            <i className="fas fa-user-plus" />
+          <div className={`auth-logo ${logoFailed ? "auth-logo-circle" : "auth-logo-image"}`}>
+            {!logoFailed ? (
+              <img src={BRAND_LOGO_SRC} alt={BRAND_NAME} onError={() => setLogoFailed(true)} />
+            ) : (
+              <i className="fas fa-user-plus" />
+            )}
           </div>
           <h1 className="auth-title">Account Aanmaken</h1>
-          <p className="auth-subtitle">Registreer voor Expert Excel</p>
+          <p className="auth-subtitle">Registreer voor {APP_NAME}</p>
         </div>
 
         {error && (

@@ -7,6 +7,7 @@ import Stamgegevens from "./pages/Stamgegevens.jsx";
 import FeatureFlags from "./pages/FeatureFlags.jsx";
 import { SettingsView } from "./pages/Settings.jsx";
 import Profile from "./pages/Profile.jsx";
+import WordbeeExplorer from "./pages/WordbeeExplorer.jsx";
 import Login from "./pages/auth/Login.jsx";
 import Register from "./pages/auth/Register.jsx";
 import ForgotPassword from "./pages/auth/ForgotPassword.jsx";
@@ -16,7 +17,9 @@ import useAppSettings from "./hooks/useAppSettings.js";
 import useAuth from "./hooks/useAuth.js";
 import usePermissions from "./hooks/usePermissions.js";
 import { loadBootstrap } from "./bootstrap.js";
+import { APP_NAME, BRAND_LOGO_SRC, BRAND_SHORT_NAME } from "./config/branding.js";
 import { isRouteMatch, SIDEBAR_ENTRIES, SIDEBAR_HEADER_WHITE, SIDEBAR_STYLE } from "./config/sidebarConfig.js";
+import { getSidebarRoleLabel } from "./utils/sidebarUserRole.js";
 
 const SIDEBAR_KEY = "sidebarCollapsed";
 
@@ -62,6 +65,7 @@ function App() {
     );
   }, [location.pathname]);
   const { user, loading: authLoading, logout, hasCache: authCached, ready: authReady } = useAuth(!isAuthRoute);
+  const sidebarRoleLabel = useMemo(() => getSidebarRoleLabel(user), [user]);
   const {
     settings,
     updateSettings,
@@ -146,6 +150,7 @@ function App() {
       "Feature flags": "Beheer feature toggles",
       Instellingen: "Theme & layout instellingen",
       Profiel: "Beheer je persoonlijke gegevens en instellingen",
+      WordBee: "Importeer API-data per maand en genereer PDF-rapport",
     };
     return {
       title: match?.label || "Dashboard",
@@ -277,8 +282,7 @@ function App() {
       <aside className={sidebarClass}>
         <div className="sidebar-header">
           <div className="logo">
-            <img className="logo-img" alt="Template" src="https://placehold.co/32x32" />
-            <h3>Template UI</h3>
+            <img className="logo-img" alt={BRAND_SHORT_NAME} src={BRAND_LOGO_SRC} />
           </div>
           <button className="sidebar-toggle" onClick={toggleSidebar} type="button">
             <i className="fas fa-angle-left" />
@@ -366,7 +370,7 @@ function App() {
               <i className="fas fa-user-circle" />
               <div className="user-details">
                 <span className="user-name">{user?.username || "Gebruiker"}</span>
-                <span className="user-role">{user?.role || "Gebruiker"}</span>
+                {sidebarRoleLabel ? <span className="user-role">{sidebarRoleLabel}</span> : null}
               </div>
             </button>
             {profileOpen && (
@@ -470,10 +474,14 @@ function App() {
             ) : (
               <Route path="/profiel" element={<Navigate to="/" replace />} />
             )}
+            <Route
+              path="/settings/wordbee"
+              element={isAllowedPath("/settings/wordbee") ? <WordbeeExplorer /> : <Navigate to={firstAllowedPath} replace />}
+            />
           </Routes>
         </div>
 
-        <footer className="app-footer">Template UI | Live DB ready</footer>
+        <footer className="app-footer">{APP_NAME} | Live DB ready</footer>
       </div>
 
       <div className={`sidebar-overlay ${mobileOpen ? "active" : ""}`} onClick={() => setMobileOpen(false)} />

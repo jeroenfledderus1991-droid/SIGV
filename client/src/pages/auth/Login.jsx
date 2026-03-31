@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { getJson, postJson } from "../../api";
 import { loadBootstrap } from "../../bootstrap";
+import { APP_NAME, BRAND_LOGO_SRC, BRAND_NAME, BRAND_TAGLINE } from "../../config/branding.js";
 
 export default function Login() {
   const [logoFailed, setLogoFailed] = useState(false);
@@ -111,13 +112,13 @@ export default function Login() {
         <div className="auth-header">
           <div className={`auth-logo ${logoFailed ? "auth-logo-circle" : "auth-logo-image"}`}>
             {!logoFailed ? (
-              <img src="/expert_excel_logo.png" alt="Expert Excel" onError={() => setLogoFailed(true)} />
+              <img src={BRAND_LOGO_SRC} alt={BRAND_NAME} onError={() => setLogoFailed(true)} />
             ) : (
               <i className="fas fa-leaf" />
             )}
           </div>
-          <h1 className="auth-title">Planningstool</h1>
-          <p className="auth-subtitle">Meld je aan om door te gaan</p>
+          <h1 className="auth-title">{APP_NAME}</h1>
+          <p className="auth-subtitle">{BRAND_TAGLINE}</p>
         </div>
 
         {error && (

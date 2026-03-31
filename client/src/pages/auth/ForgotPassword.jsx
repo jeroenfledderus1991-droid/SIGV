@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { postJson } from "../../api";
+import { BRAND_LOGO_SRC, BRAND_NAME } from "../../config/branding.js";
 
 export default function ForgotPassword() {
   const [logoFailed, setLogoFailed] = useState(false);
@@ -37,7 +38,7 @@ export default function ForgotPassword() {
         <div className="auth-header">
           <div className={`auth-logo ${logoFailed ? "auth-logo-circle" : "auth-logo-image"}`}>
             {!logoFailed ? (
-              <img src="/expert_excel_logo.png" alt="Expert Excel" onError={() => setLogoFailed(true)} />
+              <img src={BRAND_LOGO_SRC} alt={BRAND_NAME} onError={() => setLogoFailed(true)} />
             ) : (
               <i className="fas fa-key" />
             )}

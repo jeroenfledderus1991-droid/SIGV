@@ -75,6 +75,17 @@ dotnet run
 - Express reads the root `.env` automatically.
 - .NET loads the root `.env` at startup using DotNetEnv.
 - Configure CORS with `CORS_ORIGIN` when front-end and APIs run on different ports.
+- WordBee import (UI route `/settings/wordbee`) gebruikt server-side env:
+  - `WORDBEE_API_BASE_URL=https://...`
+  - `WORDBEE_API_KEY=...`
+  - `WORDBEE_AUTH_MODE=api2` (default) of `header`
+  - Bij `api2`: `WORDBEE_API_ACCOUNT_ID=<platform-id>`
+  - Optioneel: `WORDBEE_API_KEY_HEADER` (default `Authorization`)
+  - Optioneel: `WORDBEE_API_KEY_PREFIX` (default `Bearer `)
+  - Optioneel: `WORDBEE_TIMEOUT_MS` (default `30000`)
+  - Sync endpoint: `POST /api/wordbee/import-period` (year + month) haalt API-data op en schrijft alleen nieuwe/gewijzigde regels weg.
+  - Data endpoint: `GET /api/wordbee/imported-rows?year=YYYY&month=M` leest opgeslagen regels (incl. handmatige overrides).
+  - Save endpoint: `PUT /api/wordbee/imported-rows/:id` slaat handmatige wijzigingen op.
 
 ## Engineering Standards
 - Keep code compact and modular. Avoid large, mixed-responsibility files.

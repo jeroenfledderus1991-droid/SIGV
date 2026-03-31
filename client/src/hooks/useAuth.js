@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
-import { getJson, postJson } from "../api";
-import { getBootstrap, loadBootstrap } from "../bootstrap";
+import { UNAUTHENTICATED_EVENT, getJson, postJson } from "../api";
+import { getBootstrap, loadBootstrap, setBootstrap } from "../bootstrap";
 
 const STORAGE_KEY = "authUser";
 
@@ -38,6 +38,14 @@ export default function useAuth(enabled = true) {
   const [loading, setLoading] = useState(enabled);
   const [ready, setReady] = useState(!enabled);
 
+  const clearClientAuthState = useCallback(() => {
+    setUser(null);
+    setLoading(false);
+    setReady(true);
+    storeUser(null);
+    setBootstrap(null);
+  }, []);
+
   const refresh = useCallback(() => {
     setLoading(true);
     return getJson("/auth/me")
@@ -47,21 +55,32 @@ export default function useAuth(enabled = true) {
         return data;
       })
       .catch(() => {
-        setUser(null);
-        storeUser(null);
+        clearClientAuthState();
         return null;
       })
       .finally(() => setLoading(false));
-  }, []);
+  }, [clearClientAuthState]);
 
   const logout = useCallback(() => {
     return postJson("/auth/logout")
       .catch(() => null)
       .finally(() => {
-        setUser(null);
-        storeUser(null);
+        clearClientAuthState();
       });
-  }, []);
+  }, [clearClientAuthState]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return undefined;
+    }
+    const handleUnauthenticated = () => {
+      clearClientAuthState();
+    };
+    window.addEventListener(UNAUTHENTICATED_EVENT, handleUnauthenticated);
+    return () => {
+      window.removeEventListener(UNAUTHENTICATED_EVENT, handleUnauthenticated);
+    };
+  }, [clearClientAuthState]);
 
   useEffect(() => {
     if (!enabled) {

@@ -29,8 +29,6 @@ function registerAuthRoutes({
   failedLoginAudit,
   supportAdminAllowlist,
 }) {
-  const BLOCKED_LOCAL_IDENTIFIERS = new Set(["eesa@admin.local", "eesa"]);
-
   function requireLocalAuthEnabled(req, res, next) {
     if (!hasLocalAuth) {
       return res.status(501).json({ error: "Lokale login is uitgeschakeld." });
@@ -180,15 +178,6 @@ function registerAuthRoutes({
         statusCode: 400,
       });
       return res.status(400).json({ error: "E-mailadres en wachtwoord zijn verplicht." });
-    }
-    if (BLOCKED_LOCAL_IDENTIFIERS.has(identifier)) {
-      await logCentralFailedLogin(req, {
-        provider: "local",
-        identifier,
-        failureReason: "legacy_account_disabled",
-        statusCode: 403,
-      });
-      return res.status(403).json({ error: "Lokale login voor dit account is uitgeschakeld." });
     }
     try {
       const pool = await db.getPool();

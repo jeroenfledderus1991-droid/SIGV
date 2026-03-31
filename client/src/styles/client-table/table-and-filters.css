@@ -188,7 +188,7 @@ body.column-resizing * {
     border: 1px solid var(--border-color);
     border-radius: var(--border-radius);
     box-shadow: var(--shadow-lg);
-    z-index: 2000;
+    z-index: 3000;
     width: 280px; /* Fixed width instead of min/max */
     max-height: 400px;
     overflow: visible;
@@ -444,5 +444,50 @@ body .standard-table--has-width-overrides .table-filler-header,
 body .standard-table--has-width-overrides .table-filler-cell {
     width: auto;
     max-width: none;
+}
+
+body .standard-table .table-editable-cell {
+    padding-top: calc(6px * var(--table-zoom)) !important;
+    padding-bottom: calc(6px * var(--table-zoom)) !important;
+}
+
+body .standard-table .table-inline-input {
+    width: 100%;
+    min-width: 0;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-size: calc(0.82rem * var(--table-zoom));
+    line-height: 1.2;
+    padding: calc(6px * var(--table-zoom)) calc(8px * var(--table-zoom));
+}
+
+body .standard-table .table-inline-input:focus {
+    outline: none;
+    border-color: var(--accent-color);
+    box-shadow: 0 0 0 2px rgba(var(--accent-color-rgb), 0.16);
+}
+
+body .standard-table .table-add-row {
+    background: rgba(var(--accent-color-rgb), 0.06);
+}
+
+body .standard-table .table-add-row .actions-column {
+    background: rgba(var(--accent-color-rgb), 0.06);
+}
+
+body .standard-table .table-add-row-placeholder {
+    color: var(--text-muted);
+}
+
+body .standard-table .table-action-btn.add {
+    border-color: rgba(var(--accent-color-rgb), 0.28);
+}
+
+body .standard-table .table-action-btn.add:hover {
+    background: var(--accent-color);
+    color: var(--accent-text-color);
+    border-color: var(--accent-color);
 }
 

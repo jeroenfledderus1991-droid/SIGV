@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { deleteJson, getJson, postJson, putJson } from "../api";
 import ClientTable from "../components/ClientTable.jsx";
+import ClientTableEditable from "../components/ClientTableEditable.jsx";
 
 const TABS = [
   { key: "statussen", label: "Statussen", icon: "fa-tags" },
+  { key: "editable_test", label: "Editable test", icon: "fa-flask" },
 ];
 
 function Modal({ title, open, onClose, onSubmit, children, submitLabel }) {
@@ -43,6 +45,35 @@ export default function Stamgegevens() {
     return "statussen";
   });
   const [statussen, setStatussen] = useState([]);
+  const [editableTestRows, setEditableTestRows] = useState([
+    {
+      id: 1,
+      code: "ART-001",
+      omschrijving: "Testregel A",
+      categorie: "Algemeen",
+      prijs: 12.5,
+      actief: 1,
+      laatst_bijgewerkt: "2026-03-25T10:30:00",
+    },
+    {
+      id: 2,
+      code: "ART-002",
+      omschrijving: "Testregel B",
+      categorie: "Services",
+      prijs: 8.0,
+      actief: 0,
+      laatst_bijgewerkt: "2026-03-25T11:45:00",
+    },
+    {
+      id: 3,
+      code: "ART-003",
+      omschrijving: "Testregel C",
+      categorie: "Product",
+      prijs: 19.95,
+      actief: 1,
+      laatst_bijgewerkt: "2026-03-26T08:10:00",
+    },
+  ]);
   const [modalState, setModalState] = useState({ type: null, data: null });
   const modalLabel = useMemo(() => {
     if (!modalState.type) return "";
@@ -65,6 +96,27 @@ export default function Stamgegevens() {
     []
   );
 
+  const editableTestColumns = useMemo(
+    () => [
+      { key: "id", label: "ID", sortable: true, widthWeight: 0.5, minWidth: "80px", editable: false },
+      { key: "code", label: "Code", sortable: true, widthWeight: 0.8, minWidth: "130px" },
+      { key: "omschrijving", label: "Omschrijving", sortable: true, widthWeight: 1.6, minWidth: "220px" },
+      { key: "categorie", label: "Categorie", sortable: true, widthWeight: 1.1, minWidth: "160px" },
+      { key: "prijs", label: "Prijs", type: "currency", sortable: true, widthWeight: 0.8, minWidth: "130px" },
+      { key: "actief", label: "Actief", type: "boolean", sortable: true, widthWeight: 0.8, minWidth: "120px" },
+      {
+        key: "laatst_bijgewerkt",
+        label: "Laatst bijgewerkt",
+        type: "datetime",
+        sortable: true,
+        widthWeight: 1.2,
+        minWidth: "190px",
+        editable: false,
+      },
+    ],
+    []
+  );
+
   const refreshType = useCallback((type) => {
     if (type === "statussen") {
       return getJson("/stamgegevens/statussen").then(setStatussen).catch(() => setStatussen([]));
@@ -83,11 +135,43 @@ export default function Stamgegevens() {
   useEffect(() => {
     window.editStatus = (id, rowData) => setModalState({ type: "statussen", data: { id, ...rowData } });
     window.deleteStatus = (id) => handleDelete("statussen", id);
+    window.deleteEditableTestRow = (id) => {
+      setEditableTestRows((previousRows) => previousRows.filter((row) => Number(row.id) !== Number(id)));
+    };
     return () => {
       delete window.editStatus;
       delete window.deleteStatus;
+      delete window.deleteEditableTestRow;
     };
   }, [handleDelete]);
+
+  const handleEditableTestDataChange = useCallback((event) => {
+    if (!event || !event.row) return;
+    if (event.type === "row_add") {
+      setEditableTestRows((previousRows) => [...previousRows, event.row]);
+      return;
+    }
+
+    const rowId = event.row.id;
+    setEditableTestRows((previousRows) =>
+      previousRows.map((row) =>
+        Number(row.id) === Number(rowId)
+          ? { ...event.row, laatst_bijgewerkt: new Date().toISOString() }
+          : row
+      )
+    );
+  }, []);
+
+  const handleEditableTestAddRow = useCallback((newRow) => {
+    const nextId = editableTestRows.length
+      ? Math.max(...editableTestRows.map((row) => Number(row.id) || 0)) + 1
+      : 1;
+    return {
+      ...newRow,
+      id: nextId,
+      laatst_bijgewerkt: new Date().toISOString(),
+    };
+  }, [editableTestRows]);
 
   const handleSave = async (event) => {
     event.preventDefault();
@@ -138,6 +222,48 @@ export default function Stamgegevens() {
         </>
       );
     }
+    if (activeTab === "editable_test") {
+      return (
+        <>
+          <div className="inline-form" style={{ justifyContent: "space-between", marginBottom: "16px" }}>
+            <h3>Editable ClientTable test (tijdelijk)</h3>
+          </div>
+          <ClientTableEditable
+            tableId="editableTestTable"
+            title="Editable test tabel"
+            columns={editableTestColumns}
+            data={editableTestRows}
+            actions={[{ type: "delete", onClick: "deleteEditableTestRow" }]}
+            editableColumns={{
+              id: false,
+              code: true,
+              omschrijving: true,
+              categorie: true,
+              prijs: true,
+              actief: true,
+              laatst_bijgewerkt: false,
+            }}
+            newRowDefaults={{
+              code: "",
+              omschrijving: "",
+              categorie: "Algemeen",
+              prijs: 0,
+              actief: 1,
+            }}
+            onDataChange={handleEditableTestDataChange}
+            onAddRow={handleEditableTestAddRow}
+            enableColumnFilters
+            exportEnabled
+            searchEnabled
+            horizontalScroll="auto"
+            actionsColumnWidth={112}
+            enableColumnCustomization
+            noDataMessage="Nog geen testregels. Voeg hierboven een regel toe."
+          />
+        </>
+      );
+    }
+    return null;
 
   };
 

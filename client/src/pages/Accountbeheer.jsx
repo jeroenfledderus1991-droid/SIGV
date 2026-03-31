@@ -36,7 +36,7 @@ export default function Accountbeheer() {
       .catch(() => setUsers([]));
     getJson("/accounts/roles").then(setRoles).catch(() => setRoles([]));
     getJson("/auth/me")
-      .then((me) => setCanManageSuperAdmin((me?.email || "").toLowerCase() === "eesa@admin.local"))
+      .then((me) => setCanManageSuperAdmin(Boolean(me?.is_super_admin)))
       .catch(() => setCanManageSuperAdmin(false));
   }, []);
 

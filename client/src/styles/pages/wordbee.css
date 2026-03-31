@@ -1,0 +1,298 @@
+.wordbee-page .wordbee-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  width: 100%;
+}
+
+.wordbee-page .wordbee-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 16px;
+  box-shadow: var(--shadow-sm);
+}
+
+.wordbee-page .wordbee-card-wide {
+  grid-column: 1 / -1;
+}
+
+.wordbee-page .wordbee-title {
+  margin: 0 0 10px;
+  font-size: 1rem;
+  color: var(--text-primary);
+}
+
+.wordbee-page .wordbee-meta {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 10px;
+  color: var(--text-primary);
+  font-size: 0.9rem;
+}
+
+.wordbee-page .wordbee-help,
+.wordbee-page .wordbee-muted {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+}
+
+.wordbee-page .wordbee-form {
+  display: grid;
+  gap: 10px;
+}
+
+.wordbee-page .wordbee-row {
+  display: grid;
+  grid-template-columns: 100px 1fr;
+  gap: 8px;
+}
+
+.wordbee-page select,
+.wordbee-page input,
+.wordbee-page textarea {
+  width: 100%;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  padding: 8px 10px;
+  font-size: 0.9rem;
+}
+
+.wordbee-page textarea {
+  resize: vertical;
+  min-height: 90px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
+
+.wordbee-page .wordbee-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+
+.wordbee-page .wordbee-complaint-label {
+  display: block;
+  margin-top: 12px;
+}
+
+.wordbee-page .wordbee-complaint-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.wordbee-page .wordbee-complaint-field {
+  min-width: 0;
+}
+
+.wordbee-page .wordbee-complaint-field-wide {
+  grid-column: 1 / -1;
+}
+
+.wordbee-page .wordbee-filter-grid {
+  display: grid;
+  grid-template-columns: 1.2fr 180px 1fr;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.wordbee-page .wordbee-error {
+  margin: 10px 0 0;
+  color: #d81b60;
+  font-size: 0.85rem;
+}
+
+.wordbee-page .wordbee-info {
+  margin: 10px 0 0;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+}
+
+.wordbee-page .wordbee-success {
+  margin: 10px 0 0;
+  color: #2e7d32;
+  font-size: 0.85rem;
+}
+
+.wordbee-page .table-responsive {
+  max-height: 68vh;
+  overflow-y: auto;
+}
+
+.wordbee-page .standard-table thead th {
+  position: sticky !important;
+  top: 0;
+  z-index: 14;
+  background: var(--table-header-bg);
+}
+
+.wordbee-page .standard-table .table-filler-header {
+  position: sticky;
+  top: 0;
+  z-index: 14;
+  background: var(--table-header-bg);
+}
+
+.wordbee-page .standard-table .actions-header {
+  top: 0;
+  z-index: 15;
+}
+
+.wordbee-page .wordbee-progress {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--border-color-light);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--accent-color) 7%, var(--bg-secondary));
+}
+
+.wordbee-page .wordbee-progress-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  color: var(--text-primary);
+  font-size: 0.84rem;
+  margin-bottom: 8px;
+}
+
+.wordbee-page .wordbee-progress-track {
+  width: 100%;
+  height: 8px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--bg-tertiary) 80%, var(--border-color-light));
+}
+
+.wordbee-page .wordbee-progress-bar {
+  width: 35%;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--accent-color), color-mix(in srgb, var(--accent-color) 50%, #ffffff));
+  animation: wordbee-progress-slide 1.2s linear infinite;
+}
+
+@keyframes wordbee-progress-slide {
+  0% {
+    transform: translateX(-120%);
+  }
+  100% {
+    transform: translateX(330%);
+  }
+}
+
+.wordbee-page .wordbee-result {
+  margin: 10px 0 0;
+  padding: 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border-color-light);
+  background: var(--bg-tertiary);
+  max-height: 380px;
+  overflow: auto;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.wordbee-page .wordbee-editable-wrap {
+  margin-top: 10px;
+}
+
+.wordbee-page .wordbee-table-wrap {
+  margin-top: 10px;
+  border: 1px solid var(--border-color-light);
+  border-radius: 8px;
+  background: var(--bg-tertiary);
+}
+
+.wordbee-page .wordbee-table-groups {
+  display: grid;
+  gap: 10px;
+}
+
+.wordbee-page .wordbee-table-meta {
+  padding: 8px 10px;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border-color-light);
+  background: color-mix(in srgb, var(--bg-secondary) 92%, var(--bg-primary));
+}
+
+.wordbee-page .wordbee-table-scroll {
+  max-height: 420px;
+  overflow: auto;
+}
+
+.wordbee-page .wordbee-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.78rem;
+}
+
+.wordbee-page .wordbee-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--bg-secondary);
+  text-align: left;
+  font-weight: 600;
+  border-bottom: 1px solid var(--border-color);
+  padding: 7px 8px;
+  white-space: nowrap;
+}
+
+.wordbee-page .wordbee-table td {
+  border-bottom: 1px solid color-mix(in srgb, var(--border-color-light) 80%, transparent);
+  padding: 6px 8px;
+  vertical-align: top;
+  white-space: nowrap;
+}
+
+.wordbee-page .wordbee-table tbody tr:hover {
+  background: color-mix(in srgb, var(--accent-color) 6%, var(--bg-secondary));
+}
+
+.wordbee-page .wordbee-batch-results {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.wordbee-page .wordbee-batch-item {
+  border: 1px solid var(--border-color-light);
+  border-radius: 8px;
+  padding: 10px;
+  background: color-mix(in srgb, var(--bg-secondary) 86%, var(--bg-primary));
+}
+
+.wordbee-page .wordbee-batch-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: center;
+  font-size: 0.85rem;
+}
+
+.wordbee-page details > summary {
+  cursor: pointer;
+  margin-top: 8px;
+  color: var(--accent-color);
+  font-size: 0.85rem;
+}
+
+@media (max-width: 1100px) {
+  .wordbee-page .wordbee-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .wordbee-page .wordbee-filter-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .wordbee-page .wordbee-complaint-grid {
+    grid-template-columns: 1fr;
+  }
+}

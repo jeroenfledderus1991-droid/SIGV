@@ -32,6 +32,12 @@ class ClientTable {
             deleteCancelButton: options.deleteCancelButton || 'Annuleren',
             onDeleteConfirm: options.onDeleteConfirm || null,
             onRowReorder: options.onRowReorder || null,
+            enableInlineEdit: options.enableInlineEdit === true,
+            enableRowAdd: options.enableRowAdd === true,
+            editableColumns: options.editableColumns || {},
+            onDataChange: options.onDataChange || null,
+            onAddRow: options.onAddRow || null,
+            newRowDefaults: options.newRowDefaults || {},
             ...options
         };
         
@@ -43,6 +49,7 @@ class ClientTable {
         this.sortDirection = 'asc';
         this.columnFilters = {}; // Store active filters per column
         this.EMPTY_FILTER_TOKEN = '__CLIENT_TABLE_EMPTY__';
+        this.newRowDraft = {};
         
         // Initialize
         this.init();
@@ -67,13 +74,28 @@ class ClientTable {
             return Number.isNaN(value.getTime()) ? null : value;
         }
         if (typeof value === 'string') {
-            const dateOnlyMatch = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+            const trimmedValue = value.trim();
+
+            const nlDateTimeMatch = trimmedValue.match(/^(\d{2})[-\/](\d{2})[-\/](\d{4})(?:[ T](\d{2}):(\d{2})(?::(\d{2}))?)?$/);
+            if (nlDateTimeMatch) {
+                const [, day, month, year, hour, minute, second] = nlDateTimeMatch;
+                return new Date(
+                    Number(year),
+                    Number(month) - 1,
+                    Number(day),
+                    Number(hour || 0),
+                    Number(minute || 0),
+                    Number(second || 0)
+                );
+            }
+
+            const dateOnlyMatch = trimmedValue.match(/^(\d{4})-(\d{2})-(\d{2})$/);
             if (dateOnlyMatch) {
                 const [, year, month, day] = dateOnlyMatch;
                 return new Date(Number(year), Number(month) - 1, Number(day));
             }
 
-            const dateTimeMatch = value.match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::(\d{2}))?/);
+            const dateTimeMatch = trimmedValue.match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::(\d{2}))?/);
             if (dateTimeMatch) {
                 const [, year, month, day, hour, minute, second] = dateTimeMatch;
                 return new Date(
@@ -177,10 +199,13 @@ class ClientTable {
                 if (!isVisible) {
                     // Position dropdown using fixed positioning
                     const rect = toggle.getBoundingClientRect();
+                    const tableContainer = document.querySelector(`#${this.tableId}-container`);
+                    const containerRect = tableContainer ? tableContainer.getBoundingClientRect() : null;
                     const dropdownWidth = 280;
-                    dropdown.style.top = `${rect.bottom + 2}px`;
+                    dropdown.style.top = `${rect.bottom + 6}px`;
                     const leftPosition = rect.right - dropdownWidth;
-                    dropdown.style.left = `${Math.max(8, leftPosition)}px`;
+                    const minLeft = Math.max(8, (containerRect?.left || 0) + 8);
+                    dropdown.style.left = `${Math.max(minLeft, leftPosition)}px`;
                     
                     // Toggle current dropdown
                     dropdown.style.display = 'block';
@@ -285,7 +310,7 @@ class ClientTable {
         // Build filter options HTML
         let html = '<div class="filter-search-wrapper">';
         html += `<input type="text" class="filter-search" placeholder="Zoek en filter..." />`;
-        html += `<button class="filter-search-apply" onclick="window.${this.tableId}_instance.applySearchFilter('${columnKey}')" title="Pas zoekopdracht toe als filter">
+        html += `<button class="filter-search-apply" onclick="window['${this.tableId}_instance'].applySearchFilter('${columnKey}')" title="Pas zoekopdracht toe als filter">
                     <i class="fas fa-check"></i>
                 </button>`;
         html += '</div>';
@@ -293,8 +318,8 @@ class ClientTable {
         
         // Select All / Deselect All
         html += '<div class="filter-actions">';
-        html += `<button class="filter-action-btn" onclick="window.${this.tableId}_instance.selectAllFilters('${columnKey}')">Alles selecteren</button>`;
-        html += `<button class="filter-action-btn" onclick="window.${this.tableId}_instance.deselectAllFilters('${columnKey}')">Alles deselecteren</button>`;
+        html += `<button class="filter-action-btn" onclick="window['${this.tableId}_instance'].selectAllFilters('${columnKey}')">Alles selecteren</button>`;
+        html += `<button class="filter-action-btn" onclick="window['${this.tableId}_instance'].deselectAllFilters('${columnKey}')">Alles deselecteren</button>`;
         html += '</div>';
         
         // Individual options
@@ -309,7 +334,7 @@ class ClientTable {
                     <input type="checkbox" 
                            value="${this.escapeHtml(String(value))}" 
                            ${isChecked ? 'checked' : ''}
-                           onchange="window.${this.tableId}_instance.handleColumnFilter('${columnKey}', this.value, this.checked)" />
+                           onchange="window['${this.tableId}_instance'].handleColumnFilter('${columnKey}', this.value, this.checked)" />
                     <span>${displayValue}</span>
                 </label>
             `;
@@ -980,9 +1005,26 @@ class ClientTable {
         
         // Sort
         if (this.sortColumn) {
+            const sortConfig = this.config.columns.find((col) => col.key === this.sortColumn) || null;
             filtered = [...filtered].sort((a, b) => {
                 const aVal = a[this.sortColumn];
                 const bVal = b[this.sortColumn];
+
+                if (sortConfig && (sortConfig.type === 'date' || sortConfig.type === 'datetime')) {
+                    const aDate = this.parseDateValue(aVal);
+                    const bDate = this.parseDateValue(bVal);
+                    const aTime = aDate ? aDate.getTime() : Number.POSITIVE_INFINITY;
+                    const bTime = bDate ? bDate.getTime() : Number.POSITIVE_INFINITY;
+                    return this.sortDirection === 'asc' ? aTime - bTime : bTime - aTime;
+                }
+
+                if (sortConfig && (sortConfig.type === 'number' || sortConfig.type === 'currency')) {
+                    const aNum = Number(aVal);
+                    const bNum = Number(bVal);
+                    const safeA = Number.isFinite(aNum) ? aNum : Number.POSITIVE_INFINITY;
+                    const safeB = Number.isFinite(bNum) ? bNum : Number.POSITIVE_INFINITY;
+                    return this.sortDirection === 'asc' ? safeA - safeB : safeB - safeA;
+                }
                 
                 if (typeof aVal === 'number' && typeof bVal === 'number') {
                     return this.sortDirection === 'asc' ? aVal - bVal : bVal - aVal;
@@ -992,14 +1034,185 @@ class ClientTable {
                 const bStr = String(bVal).toLowerCase();
                 
                 if (this.sortDirection === 'asc') {
-                    return aStr < bStr ? -1 : aStr > bStr ? 1 : 0;
+                    return aStr.localeCompare(bStr, 'nl', { numeric: true, sensitivity: 'base' });
                 } else {
-                    return aStr > bStr ? -1 : aStr < bStr ? 1 : 0;
+                    return bStr.localeCompare(aStr, 'nl', { numeric: true, sensitivity: 'base' });
                 }
             });
         }
         
         this.currentData = filtered;
+    }
+
+    isColumnEditable(column) {
+        if (!column || !column.key) return false;
+        if (column.editable === false) return false;
+        if (column.readOnly === true) return false;
+
+        const source = this.config.editableColumns;
+        if (Array.isArray(source)) {
+            return source.includes(column.key);
+        }
+        if (typeof source === 'function') {
+            return source(column, this.tableId) !== false;
+        }
+        if (source && typeof source === 'object') {
+            return source[column.key] !== false;
+        }
+        return false;
+    }
+
+    getDefaultValueForColumn(column) {
+        if (!column) return '';
+        if (Object.prototype.hasOwnProperty.call(this.config.newRowDefaults || {}, column.key)) {
+            return this.config.newRowDefaults[column.key];
+        }
+        if (column.type === 'boolean') return 0;
+        return '';
+    }
+
+    ensureNewRowDraft() {
+        const nextDraft = {};
+        this.config.columns.forEach((column) => {
+            const existing = Object.prototype.hasOwnProperty.call(this.newRowDraft, column.key)
+                ? this.newRowDraft[column.key]
+                : this.getDefaultValueForColumn(column);
+            nextDraft[column.key] = existing;
+        });
+        this.newRowDraft = nextDraft;
+    }
+
+    toDateInputValue(value) {
+        const dateObj = this.parseDateValue(value);
+        if (!dateObj) return '';
+        const year = dateObj.getFullYear();
+        const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+        const day = String(dateObj.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    }
+
+    toDateTimeLocalValue(value) {
+        const dateObj = this.parseDateValue(value);
+        if (!dateObj) return '';
+        const year = dateObj.getFullYear();
+        const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+        const day = String(dateObj.getDate()).padStart(2, '0');
+        const hour = String(dateObj.getHours()).padStart(2, '0');
+        const minute = String(dateObj.getMinutes()).padStart(2, '0');
+        return `${year}-${month}-${day}T${hour}:${minute}`;
+    }
+
+    normalizeEditableValue(column, rawValue) {
+        if (!column) return rawValue;
+        if (column.type === 'number' || column.type === 'currency') {
+            if (rawValue === '' || rawValue === null || rawValue === undefined) return null;
+            const parsed = Number(rawValue);
+            return Number.isFinite(parsed) ? parsed : null;
+        }
+        if (column.type === 'boolean') {
+            return rawValue === '1' || rawValue === 1 || rawValue === true || String(rawValue).toLowerCase() === 'true' ? 1 : 0;
+        }
+        if (column.type === 'date' || column.type === 'datetime') {
+            return rawValue || null;
+        }
+        return rawValue;
+    }
+
+    createEditableInput({ column, value, onChange }) {
+        if (column.type === 'boolean') {
+            const select = document.createElement('select');
+            select.className = 'table-inline-input table-inline-input--select';
+            const activeOption = document.createElement('option');
+            activeOption.value = '1';
+            activeOption.textContent = 'Actief';
+            const inactiveOption = document.createElement('option');
+            inactiveOption.value = '0';
+            inactiveOption.textContent = 'Inactief';
+            select.appendChild(activeOption);
+            select.appendChild(inactiveOption);
+            select.value = this.normalizeEditableValue(column, value) === 1 ? '1' : '0';
+            select.addEventListener('change', (event) => onChange(event.target.value));
+            return select;
+        }
+
+        const input = document.createElement('input');
+        input.className = 'table-inline-input';
+        input.autocomplete = 'off';
+
+        if (column.type === 'number' || column.type === 'currency') {
+            input.type = 'number';
+            if (column.type === 'currency') {
+                input.step = '0.01';
+            }
+            input.value = value === null || value === undefined ? '' : String(value);
+        } else if (column.type === 'date') {
+            input.type = 'date';
+            input.value = this.toDateInputValue(value);
+        } else if (column.type === 'datetime') {
+            input.type = 'datetime-local';
+            input.value = this.toDateTimeLocalValue(value);
+        } else {
+            input.type = 'text';
+            input.value = value === null || value === undefined ? '' : String(value);
+        }
+
+        input.addEventListener('change', (event) => onChange(event.target.value));
+        return input;
+    }
+
+    notifyDataChange(payload) {
+        if (typeof this.config.onDataChange === 'function') {
+            this.config.onDataChange(payload);
+        }
+    }
+
+    updateCellValue(item, column, rawValue) {
+        const nextValue = this.normalizeEditableValue(column, rawValue);
+        item[column.key] = nextValue;
+        this.notifyDataChange({
+            type: 'cell_edit',
+            tableId: this.tableId,
+            row: item,
+            columnKey: column.key,
+            value: nextValue,
+        });
+    }
+
+    async submitNewRow() {
+        this.ensureNewRowDraft();
+        const payload = {};
+        this.config.columns.forEach((column) => {
+            if (this.isColumnEditable(column)) {
+                payload[column.key] = this.newRowDraft[column.key];
+                return;
+            }
+            payload[column.key] = this.getDefaultValueForColumn(column);
+        });
+
+        let rowToAdd = { ...payload };
+        if (typeof this.config.onAddRow === 'function') {
+            const callbackResult = await Promise.resolve(this.config.onAddRow({ ...payload }));
+            if (callbackResult && typeof callbackResult === 'object') {
+                rowToAdd = callbackResult;
+            } else if (callbackResult === false) {
+                return;
+            }
+        }
+
+        if (!rowToAdd.id && !rowToAdd.Id) {
+            rowToAdd.id = `tmp-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
+        }
+
+        this.originalData = [...this.originalData, rowToAdd];
+        this.filterAndSort();
+        this.currentPage = Math.max(1, Math.ceil(this.currentData.length / this.rowsPerPage));
+        this.newRowDraft = {};
+        this.notifyDataChange({
+            type: 'row_add',
+            tableId: this.tableId,
+            row: rowToAdd,
+        });
+        this.render();
     }
     
     render() {
@@ -1030,7 +1243,9 @@ class ClientTable {
             td.style.padding = '2rem';
             tr.appendChild(td);
             tbody.appendChild(tr);
-            return;
+            if (!(this.config.enableInlineEdit && this.config.enableRowAdd)) {
+                return;
+            }
         }
         
         pageData.forEach((item, index) => {
@@ -1070,7 +1285,19 @@ class ClientTable {
                 }
                 
                 let value = item[column.key];
-                
+
+                if (this.config.enableInlineEdit && this.isColumnEditable(column)) {
+                    td.classList.add('table-editable-cell');
+                    const input = this.createEditableInput({
+                        column,
+                        value,
+                        onChange: (rawValue) => this.updateCellValue(item, column, rawValue),
+                    });
+                    td.appendChild(input);
+                    tr.appendChild(td);
+                    return;
+                }
+
                 // Format based on type
                 if (column.type === 'currency') {
                     value = '€ ' + parseFloat(value).toLocaleString('nl-NL', {
@@ -1164,6 +1391,60 @@ class ClientTable {
             
             tbody.appendChild(tr);
         });
+
+        if (this.config.enableInlineEdit && this.config.enableRowAdd) {
+            this.ensureNewRowDraft();
+            const addRow = document.createElement('tr');
+            addRow.className = 'table-add-row';
+
+            this.config.columns.forEach((column) => {
+                const td = document.createElement('td');
+                if (this.isColumnEditable(column)) {
+                    const input = this.createEditableInput({
+                        column,
+                        value: this.newRowDraft[column.key],
+                        onChange: (rawValue) => {
+                            this.newRowDraft[column.key] = this.normalizeEditableValue(column, rawValue);
+                        },
+                    });
+                    input.placeholder = column.label || column.key;
+                    td.appendChild(input);
+                } else {
+                    td.className = 'table-add-row-placeholder';
+                    td.textContent = '-';
+                }
+                addRow.appendChild(td);
+            });
+
+            if (this.config.actions) {
+                const fillerTd = document.createElement('td');
+                fillerTd.className = 'table-filler-cell';
+                fillerTd.setAttribute('aria-hidden', 'true');
+                addRow.appendChild(fillerTd);
+
+                const actionTd = document.createElement('td');
+                actionTd.className = 'actions-column';
+                const addBtn = document.createElement('button');
+                addBtn.className = 'table-action-btn add';
+                addBtn.type = 'button';
+                addBtn.title = this.config.addRowLabel || 'Nieuwe regel toevoegen';
+                addBtn.innerHTML = '<i class="fas fa-plus"></i>';
+                addBtn.addEventListener('click', async (event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    try {
+                        await this.submitNewRow();
+                    } catch (error) {
+                        console.error('[ClientTable] Failed to add row:', error);
+                    }
+                });
+                actionTd.appendChild(addBtn);
+                addRow.appendChild(actionTd);
+            }
+
+            tbody.appendChild(addRow);
+        }
+
         // Re-apply drag and drop if enabled
         if (this.config.enableDragDrop && this._makeRowDraggable) {
             tbody.querySelectorAll('tr').forEach(this._makeRowDraggable);
@@ -1192,7 +1473,7 @@ class ClientTable {
         
         // Previous button
         html += `<button class="pagination-btn ${this.currentPage === 1 ? 'disabled' : ''}" 
-                         onclick="window.${this.tableId}_instance.changePage(${this.currentPage - 1})"
+                         onclick="window['${this.tableId}_instance'].changePage(${this.currentPage - 1})"
                          ${this.currentPage === 1 ? 'disabled' : ''}>
                     <i class="fas fa-chevron-left"></i>
                  </button>`;
@@ -1207,23 +1488,23 @@ class ClientTable {
         }
         
         if (startPage > 1) {
-            html += `<button class="pagination-btn" onclick="window.${this.tableId}_instance.changePage(1)">1</button>`;
+            html += `<button class="pagination-btn" onclick="window['${this.tableId}_instance'].changePage(1)">1</button>`;
             if (startPage > 2) html += '<span class="pagination-ellipsis">...</span>';
         }
         
         for (let i = startPage; i <= endPage; i++) {
             html += `<button class="pagination-btn ${i === this.currentPage ? 'active' : ''}"
-                             onclick="window.${this.tableId}_instance.changePage(${i})">${i}</button>`;
+                             onclick="window['${this.tableId}_instance'].changePage(${i})">${i}</button>`;
         }
         
         if (endPage < totalPages) {
             if (endPage < totalPages - 1) html += '<span class="pagination-ellipsis">...</span>';
-            html += `<button class="pagination-btn" onclick="window.${this.tableId}_instance.changePage(${totalPages})">${totalPages}</button>`;
+            html += `<button class="pagination-btn" onclick="window['${this.tableId}_instance'].changePage(${totalPages})">${totalPages}</button>`;
         }
         
         // Next button
         html += `<button class="pagination-btn ${this.currentPage === totalPages ? 'disabled' : ''}"
-                         onclick="window.${this.tableId}_instance.changePage(${this.currentPage + 1})"
+                         onclick="window['${this.tableId}_instance'].changePage(${this.currentPage + 1})"
                          ${this.currentPage === totalPages ? 'disabled' : ''}>
                     <i class="fas fa-chevron-right"></i>
                  </button>`;
@@ -1318,7 +1599,7 @@ class ClientTable {
             <div class="client-table-modal-content">
                 <div class="client-table-modal-header">
                     <h3 class="client-table-modal-title">${this.config.deleteConfirmTitle}</h3>
-                    <button class="client-table-modal-close" onclick="window.${this.tableId}_instance.closeDeleteModal()">
+                    <button class="client-table-modal-close" onclick="window['${this.tableId}_instance'].closeDeleteModal()">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
@@ -1329,10 +1610,10 @@ class ClientTable {
                     <p class="client-table-modal-message">${this.config.deleteConfirmMessage}</p>
                 </div>
                 <div class="client-table-modal-footer">
-                    <button class="client-table-btn client-table-btn-secondary" onclick="window.${this.tableId}_instance.closeDeleteModal()">
+                    <button class="client-table-btn client-table-btn-secondary" onclick="window['${this.tableId}_instance'].closeDeleteModal()">
                         ${this.config.deleteCancelButton}
                     </button>
-                    <button class="client-table-btn client-table-btn-danger" onclick="window.${this.tableId}_instance.confirmDelete()">
+                    <button class="client-table-btn client-table-btn-danger" onclick="window['${this.tableId}_instance'].confirmDelete()">
                         <i class="fas fa-trash"></i> ${this.config.deleteConfirmButton}
                     </button>
                 </div>

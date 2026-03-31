@@ -97,7 +97,7 @@ async function getSessionUser(req) {
            u.email,
            u.voornaam,
            u.achternaam,
-           r.role_naam AS role,
+           COALESCE(r.role_naam, u.role) AS role,
            u.is_super_admin,
            s.login_time,
            s.last_seen

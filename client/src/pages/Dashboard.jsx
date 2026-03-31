@@ -20,9 +20,9 @@ export default function Dashboard() {
         </div>
         <div className="card">
           <div className="card-body">
-            <h4>Stamgegevens</h4>
+            <h4>WordBee</h4>
             <p className="text-secondary">
-              Statussen beheren via standaard tabellen.
+              API-data ophalen en rapportages genereren.
             </p>
           </div>
         </div>

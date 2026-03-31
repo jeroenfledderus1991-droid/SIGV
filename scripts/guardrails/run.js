@@ -315,7 +315,7 @@ function extractClientApiPathUsage() {
   const exact = new Set();
   const dynamic = [];
   const directApiRx = /\/api\/[a-zA-Z0-9/_:-]*/g;
-  const helperRx = /\b(getJson|postJson|putJson|deleteJson)\(\s*["'`]([^"'`]+)["'`]/g;
+  const helperRx = /\b(getJson|postJson|putJson|deleteJson|postBlob)\(\s*["'`]([^"'`]+)["'`]/g;
 
   for (const file of files) {
     const txt = fs.readFileSync(file, "utf8");

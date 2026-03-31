@@ -15,6 +15,7 @@ const { registerFeatureFlagRoutes } = require("./routes/featureFlagRoutes");
 const { registerRoleRoutes } = require("./routes/roleRoutes");
 const { registerAccountRoutes } = require("./routes/accountRoutes");
 const { registerSystemRoutes } = require("./routes/systemRoutes");
+const { registerWordbeeRoutes } = require("./routes/wordbeeRoutes");
 const { registerAuthRoutes } = require("./routes/authRoutes");
 const { registerClientShellRoutes } = require("./routes/clientShellRoutes");
 const { createAccessControl } = require("./security/accessControl");
@@ -60,6 +61,7 @@ const PAGE_PATTERNS = [
   { name: "Stamgegevens Beheer", pattern: "/stamgegevens*" },
   { name: "Feature flags", pattern: "/feature-flags*" },
   { name: "Instellingen", pattern: "/settings*" },
+  { name: "WordBee", pattern: "/settings/wordbee*" },
   { name: "Profiel", pattern: "/profiel*" },
 ];
 
@@ -75,7 +77,6 @@ const DEFAULT_SETTINGS = {
 };
 const SIDEBAR_HEADER_WHITE_FLAG = "ENABLE_SIDEBAR_HEADER_WHITE";
 const SUPER_ADMIN_ROLE_NAME = "Super Admin";
-const EESA_SUPER_ADMIN_EMAIL = "eesa@admin.local";
 
 const CLIENT_DIST_DIR = path.resolve(__dirname, "..", "..", "client", "dist");
 const CLIENT_DIST_INDEX = path.join(CLIENT_DIST_DIR, "index.html");
@@ -189,7 +190,7 @@ runStartupChecks({
   autoLoginUserEnabled: config.autoLoginUserEnabled,
   autoLoginAdminEmail: config.autoLoginAdminEmail,
   autoLoginUserEmail: config.autoLoginUserEmail,
-  demoSuperAdminEmail: EESA_SUPER_ADMIN_EMAIL,
+  demoSuperAdminEmail: null,
 });
 
 const {
@@ -250,6 +251,15 @@ registerSystemRoutes({
   normalizeTableTint,
   normalizeContainerTint,
   systemErrorAudit,
+});
+
+registerWordbeeRoutes({
+  app,
+  config,
+  db,
+  ensureDbConfigured,
+  requireAuth,
+  requirePermission,
 });
 
 registerAuthRoutes({

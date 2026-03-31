@@ -1,8 +1,8 @@
 ﻿/* ===== HEADER ===== */
 .sidebar-header {
   position: relative; /* for nub positioning */
-  min-height: 56px;
-  padding: 10px 10px;
+  min-height: 88px;
+  padding: 12px 12px;
   background: var(--sidebar-header-bg);
   border-bottom: 1px solid var(--sidebar-header-border);
   display: grid;
@@ -13,22 +13,19 @@
 .logo {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding-left: 4px;
+  justify-content: center;
+  width: 100%;
+  padding-left: 0;
   font-family: inherit;
 }
 .logo-img {
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-}
-.logo h3 {
-  color: var(--sidebar-header-ink);
-  margin: 0;
-  font-size: 14px;
-  font-weight: 600;
-  letter-spacing: .01em;
-  text-align: left;
+  width: 148px;
+  height: auto;
+  max-height: 68px;
+  border-radius: 0;
+  object-fit: contain;
+  background: transparent;
+  box-shadow: none;
 }
 
 .sidebar-toggle {
@@ -51,9 +48,9 @@
 
 .sidebar.header-white {
   --sidebar-header-bg: #ffffff;
-  --sidebar-header-ink: var(--accent-color);
-  --sidebar-header-border: color-mix(in srgb, var(--accent-color) 28%, #ffffff);
-  --sidebar-header-hover: color-mix(in srgb, var(--accent-color) 14%, transparent);
+  --sidebar-header-ink: #212550;
+  --sidebar-header-border: rgba(193, 31, 64, 0.22);
+  --sidebar-header-hover: rgba(193, 31, 64, 0.08);
 }
 
 /* ===== EDGE NUB (clickable notch to toggle) ===== */

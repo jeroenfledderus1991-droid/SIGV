@@ -23,7 +23,7 @@
 // - true  = altijd wit (handig voor donker logo)
 // - false = altijd meeleuren met sidebar
 // - null  = gebruik bestaande feature-flag gedrag
-export const SIDEBAR_HEADER_WHITE = null;
+export const SIDEBAR_HEADER_WHITE = false;
 
 // Sidebar stijl (los van kleur-variant uit theme settings):
 // - "classic"  = huidige look
@@ -34,6 +34,7 @@ export const SIDEBAR_STYLE = "contrast";
 
 export const SIDEBAR_ENTRIES = [
   { type: "link", to: "/", label: "Home", icon: "fa-home", end: true, permissions: ["/home*"] },
+  { type: "link", to: "/settings/wordbee", label: "WordBee", icon: "fa-plug", permissions: ["/settings*"] },
   {
     type: "group",
     key: "beheer",
@@ -42,7 +43,6 @@ export const SIDEBAR_ENTRIES = [
     items: [
       { to: "/accounts", label: "Accountbeheer", icon: "fa-users-cog", permissions: ["/accounts*"] },
       { to: "/rollen", label: "Rolbeheer", icon: "fa-user-shield", permissions: ["/rollen*"] },
-      { to: "/stamgegevens", label: "Stamgegevens", icon: "fa-database", permissions: ["/stamgegevens*"] },
       { to: "/feature-flags", label: "Feature flags", icon: "fa-flag", permissions: ["/feature-flags*"] },
     ],
   },

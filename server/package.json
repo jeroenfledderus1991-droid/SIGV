@@ -4,8 +4,9 @@
   "description": "",
   "main": "src/index.js",
   "scripts": {
-    "dev": "node src/index.js",
-    "start": "node src/index.js"
+    "dev": "node --watch src/index.js",
+    "start": "node src/index.js",
+    "wordbee:test-period-raw": "node scripts/testWordbeePeriodRawWrite.js"
   },
   "keywords": [],
   "author": "",

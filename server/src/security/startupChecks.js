@@ -35,7 +35,7 @@ function runStartupChecks({
   if (isProduction) {
     const demoIdentities = [autoLoginAdminEmail, autoLoginUserEmail, demoSuperAdminEmail];
     if (demoIdentities.some(looksLikeDemoIdentity)) {
-      console.error("Demo identities (EESA/admin.local/user.local) are not allowed in production config.");
+      console.error("Demo identities are not allowed in production config.");
       process.exit(1);
     }
   }
