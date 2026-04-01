@@ -282,7 +282,11 @@ def main() -> None:
         jobs_chart = temp_path / "jobs_late.png"
         words_chart = temp_path / "words_per_month.png"
         language_kpi_chart = temp_path / "language_kpis.png"
-        logo_path = root / "SIGV-logo.jpg"
+        logo_candidates = [
+            root / "SIGV-logo.jpg",
+            root / "client" / "public" / "SIGV-logo.jpg",
+        ]
+        logo_path = next((candidate for candidate in logo_candidates if candidate.exists()), None)
 
         chart_jobs_and_late(stats, jobs_chart)
         chart_words_per_month(stats, words_chart)
