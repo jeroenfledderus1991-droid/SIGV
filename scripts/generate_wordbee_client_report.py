@@ -1,7 +1,6 @@
 import argparse
 import json
 import os
-import tempfile
 from datetime import datetime
 from pathlib import Path
 
@@ -277,34 +276,29 @@ def main() -> None:
     stats = build_monthly_stats(df, args.year, args.month)
     complaint_stats = build_monthly_complaint_stats(df, complaints_df, args.year, args.month)
 
-    with tempfile.TemporaryDirectory(prefix="wordbee-report-") as temp_dir:
-        temp_path = Path(temp_dir)
-        jobs_chart = temp_path / "jobs_late.png"
-        words_chart = temp_path / "words_per_month.png"
-        language_kpi_chart = temp_path / "language_kpis.png"
-        logo_candidates = [
-            root / "SIGV-logo.jpg",
-            root / "client" / "public" / "SIGV-logo.jpg",
-        ]
-        logo_path = next((candidate for candidate in logo_candidates if candidate.exists()), None)
+    logo_candidates = [
+        root / "SIGV-logo.jpg",
+        root / "client" / "public" / "SIGV-logo.jpg",
+    ]
+    logo_path = next((candidate for candidate in logo_candidates if candidate.exists()), None)
 
-        chart_jobs_and_late(stats, jobs_chart)
-        chart_words_per_month(stats, words_chart)
-        chart_language_kpis(df, language_kpi_chart)
+    jobs_chart = chart_jobs_and_late(stats)
+    words_chart = chart_words_per_month(stats)
+    language_kpi_chart = chart_language_kpis(df)
 
-        build_pdf_report(
-            output_pdf,
-            args.year,
-            args.month,
-            stats,
-            complaint_stats,
-            complaints_df,
-            df,
-            jobs_chart,
-            words_chart,
-            language_kpi_chart,
-            logo_path,
-        )
+    build_pdf_report(
+        output_pdf,
+        args.year,
+        args.month,
+        stats,
+        complaint_stats,
+        complaints_df,
+        df,
+        jobs_chart,
+        words_chart,
+        language_kpi_chart,
+        logo_path,
+    )
 
     summary = {
         "ok": True,

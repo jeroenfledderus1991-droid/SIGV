@@ -4,6 +4,7 @@ from datetime import datetime
 from pathlib import Path
 
 import pandas as pd
+from reportlab.graphics import renderPDF
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4, landscape
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
@@ -93,9 +94,9 @@ def build_pdf_report(
     complaint_stats: pd.DataFrame,
     complaints_df: pd.DataFrame,
     df: pd.DataFrame,
-    jobs_chart: Path,
-    words_chart: Path,
-    language_kpi_chart: Path,
+    jobs_chart,
+    words_chart,
+    language_kpi_chart,
     logo_path: Path | None = None,
 ) -> None:
     doc = SimpleDocTemplate(
@@ -222,7 +223,7 @@ def build_pdf_report(
 
     story.append(Paragraph("KPI 2 | Kwaliteit > Leverbetrouwbaarheid vertaalopdracht", kpi_title_style))
     story.append(Paragraph("Leverbetrouwbaarheid op basis van tijdige oplevering; lijn stopt bij de laatste maand met data.", kpi_subtitle_style))
-    story.append(Image(str(jobs_chart), width=26.3 * cm, height=8.2 * cm))
+    story.append(renderPDF.GraphicsFlowable(jobs_chart))
     story.append(PageBreak())
 
     story.append(Paragraph("KPI 3 | Kwaliteit > Klachten op vertaalopdracht", kpi_title_style))
@@ -241,7 +242,7 @@ def build_pdf_report(
 
     story.append(Paragraph("KPI 4 | Aantal woorden vertaald", kpi_title_style))
     story.append(Paragraph("Alleen aantal vertaalde woorden per maand.", kpi_subtitle_style))
-    story.append(Image(str(words_chart), width=26.3 * cm, height=8.2 * cm))
+    story.append(renderPDF.GraphicsFlowable(words_chart))
     story.append(Paragraph(f"Totaal woorden (YTD): <b>{format_int(total_woorden)}</b>", body_style))
     story.append(PageBreak())
 
@@ -308,7 +309,7 @@ def build_pdf_report(
 
     story.append(Paragraph("Taalanalyse", kpi_title_style))
     story.append(Paragraph("Aantal opdrachten en aantal vertaalde woorden per brontaal.", kpi_subtitle_style))
-    story.append(Image(str(language_kpi_chart), width=26.0 * cm, height=14.8 * cm))
+    story.append(renderPDF.GraphicsFlowable(language_kpi_chart))
     story.append(PageBreak())
 
     story.append(Paragraph("Overzicht | Statussen vertalingen per maand", kpi_title_style))

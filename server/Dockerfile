@@ -8,7 +8,6 @@ RUN apt-get update \
         gnupg \
         python3 \
         python3-dotenv \
-        python3-matplotlib \
         python3-pandas \
         python3-pyodbc \
         python3-reportlab \

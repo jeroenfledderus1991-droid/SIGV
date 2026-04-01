@@ -1,158 +1,188 @@
 from __future__ import annotations
 
-from pathlib import Path
-
-import matplotlib
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt
-import pandas as pd
+from reportlab.graphics.shapes import Circle, Drawing, Line, PolyLine, Rect, String
+from reportlab.lib import colors
 
 from wordbee_report.branding import BRAND_COLORS
 
 
-def chart_jobs_and_late(stats: pd.DataFrame, output_path: Path) -> None:
-    fig, ax1 = plt.subplots(figsize=(13.4, 4.2))
-    ax2 = ax1.twinx()
-    x_labels = [m[:3] for m in stats["maand"]]
-    x_positions = list(range(len(x_labels)))
-    reliability_values = stats["leverbetrouwbaarheid_pct"].astype(float).where(
-        stats["opdrachten"].astype(float) > 0,
-        float("nan"),
-    )
-    bars = ax1.bar(
-        x_positions,
-        stats["opdrachten"],
-        color=BRAND_COLORS["navy"],
-        alpha=0.96,
-        label="# opdrachten",
-        width=0.62,
-    )
-    line, = ax2.plot(
-        x_positions,
-        reliability_values,
-        color=BRAND_COLORS["red"],
-        marker="o",
-        linewidth=2.6,
-        markersize=6.0,
-        label="% leverbetrouwbaarheid",
-    )
+def _color(value: str):
+    return colors.HexColor(value)
 
-    ax1.set_xticks(x_positions, x_labels)
-    ax1.set_ylabel("# opdrachten", color=BRAND_COLORS["text"])
-    ax2.set_ylabel("% leverbetrouwbaarheid", color=BRAND_COLORS["text"])
-    ax1.set_title(
-        "Kwaliteit > Leverbetrouwbaarheid vertaalopdracht",
-        color=BRAND_COLORS["text"],
-        loc="left",
-        pad=24,
-        fontsize=15,
-        fontweight="bold",
-    )
-    ax1.grid(axis="y", alpha=0.38, color=BRAND_COLORS["grid"], linestyle="--")
-    ax1.set_axisbelow(True)
-    ax2.set_ylim(bottom=0, top=104)
-    ax1.spines["top"].set_visible(False)
-    ax2.spines["top"].set_visible(False)
-    ax1.spines["right"].set_visible(False)
-    ax2.spines["left"].set_visible(False)
-    ax1.spines["left"].set_color(BRAND_COLORS["grid"])
-    ax1.spines["bottom"].set_color(BRAND_COLORS["grid"])
-    ax2.spines["right"].set_color(BRAND_COLORS["grid"])
-    ax1.tick_params(axis="x", labelrotation=0, colors=BRAND_COLORS["text"], pad=6)
-    ax1.tick_params(axis="y", colors=BRAND_COLORS["text"])
-    ax2.tick_params(axis="y", colors=BRAND_COLORS["text"])
 
-    for rect in bars:
-        value = int(rect.get_height())
-        if value <= 0:
-            continue
-        y_position = max(0.6, rect.get_height() - max(1.2, rect.get_height() * 0.15))
-        ax1.annotate(
-            f"{value}",
-            xy=(rect.get_x() + rect.get_width() / 2, y_position),
-            ha="center",
-            va="center",
-            fontsize=8.5,
-            color="#FFFFFF",
-            fontweight="bold",
+def _safe_max(values, fallback: float = 1.0) -> float:
+    numeric = [float(value) for value in values if value is not None]
+    return max(numeric) if numeric else fallback
+
+
+def _add_chart_frame(drawing: Drawing, width: float, height: float, left: float, bottom: float, top: float, right: float):
+    plot_width = width - left - right
+    plot_height = height - bottom - top
+    drawing.add(Line(left, bottom, left, bottom + plot_height, strokeColor=_color(BRAND_COLORS["grid"]), strokeWidth=1))
+    drawing.add(Line(left, bottom, left + plot_width, bottom, strokeColor=_color(BRAND_COLORS["grid"]), strokeWidth=1))
+    return plot_width, plot_height
+
+
+def chart_jobs_and_late(stats, width: float = 746, height: float = 232) -> Drawing:
+    drawing = Drawing(width, height)
+    left, bottom, top, right = 42, 28, 34, 42
+    plot_width, plot_height = _add_chart_frame(drawing, width, height, left, bottom, top, right)
+    labels = [str(value)[:3] for value in stats["maand"].tolist()]
+    jobs = [int(value) for value in stats["opdrachten"].tolist()]
+    reliability = [float(value) if int(jobs[idx]) > 0 else None for idx, value in enumerate(stats["leverbetrouwbaarheid_pct"].tolist())]
+    max_jobs = max(5, int(_safe_max(jobs, 5)))
+    slot_width = plot_width / max(1, len(labels))
+    bar_width = slot_width * 0.56
+
+    for idx in range(6):
+        y = bottom + (plot_height / 5) * idx
+        drawing.add(Line(left, y, left + plot_width, y, strokeColor=_color(BRAND_COLORS["grid"]), strokeWidth=0.7))
+
+    line_points = []
+    for idx, label in enumerate(labels):
+        center_x = left + slot_width * idx + slot_width / 2
+        value = jobs[idx]
+        bar_height = (value / max_jobs) * (plot_height - 4)
+        bar_x = center_x - bar_width / 2
+        drawing.add(
+            Rect(
+                bar_x,
+                bottom,
+                bar_width,
+                bar_height,
+                fillColor=_color(BRAND_COLORS["navy"]),
+                strokeColor=_color(BRAND_COLORS["navy"]),
+                rx=2,
+                ry=2,
+            )
         )
-
-    for x_pos, pct_value in zip(x_positions, reliability_values):
-        if pd.isna(pct_value) or float(pct_value) <= 0:
-            continue
-        ax2.annotate(
-            f"{pct_value:.1f}%",
-            xy=(x_pos, pct_value),
-            xytext=(0, 6),
-            textcoords="offset points",
-            ha="center",
-            va="bottom",
-            fontsize=8,
-            color=BRAND_COLORS["red"],
-            fontweight="bold",
-            clip_on=False,
+        if value > 0:
+            label_y = bottom + max(10, bar_height - 14)
+            drawing.add(
+                String(
+                    center_x,
+                    label_y,
+                    str(value),
+                    textAnchor="middle",
+                    fontName="Helvetica-Bold",
+                    fontSize=8,
+                    fillColor=colors.white,
+                )
+            )
+        drawing.add(
+            String(
+                center_x,
+                12,
+                label,
+                textAnchor="middle",
+                fontName="Helvetica",
+                fontSize=8,
+                fillColor=_color(BRAND_COLORS["text"]),
+            )
         )
+        reliability_value = reliability[idx]
+        if reliability_value is not None:
+            point_y = bottom + (reliability_value / 100.0) * (plot_height - 4)
+            line_points.extend([center_x, point_y])
+            drawing.add(Circle(center_x, point_y, 3.5, fillColor=_color(BRAND_COLORS["red"]), strokeColor=_color(BRAND_COLORS["red"])))
+            drawing.add(
+                String(
+                    center_x,
+                    point_y + 8,
+                    f"{reliability_value:.1f}%",
+                    textAnchor="middle",
+                    fontName="Helvetica-Bold",
+                    fontSize=7.5,
+                    fillColor=_color(BRAND_COLORS["red"]),
+                )
+            )
 
-    legend = ax1.legend(
-        [bars, line],
-        ["# vertaalopdrachten", "% leverbetrouwbaarheid"],
-        loc="upper right",
-        bbox_to_anchor=(0.985, 1.11),
-        frameon=True,
-        ncol=2,
-        fontsize=8.5,
-        borderpad=0.5,
-    )
-    legend.get_frame().set_facecolor("#FFFFFF")
-    legend.get_frame().set_edgecolor(BRAND_COLORS["grid"])
-    fig.tight_layout(rect=(0, 0, 1, 0.95))
-    fig.savefig(output_path, dpi=150)
-    plt.close(fig)
+    if len(line_points) >= 4:
+        drawing.add(PolyLine(line_points, strokeColor=_color(BRAND_COLORS["red"]), strokeWidth=2.5))
+
+    drawing.add(String(0, height - 12, "", fontSize=1))
+    drawing.add(String(left, height - 16, "# vertaalopdrachten", fontName="Helvetica", fontSize=8.5, fillColor=_color(BRAND_COLORS["text"])))
+    drawing.add(Rect(left - 14, height - 21, 10, 10, fillColor=_color(BRAND_COLORS["navy"]), strokeColor=_color(BRAND_COLORS["navy"])))
+    legend_x = width - 178
+    drawing.add(Line(legend_x, height - 16, legend_x + 12, height - 16, strokeColor=_color(BRAND_COLORS["red"]), strokeWidth=2.5))
+    drawing.add(Circle(legend_x + 6, height - 16, 2.6, fillColor=_color(BRAND_COLORS["red"]), strokeColor=_color(BRAND_COLORS["red"])))
+    drawing.add(String(legend_x + 18, height - 20, "% leverbetrouwbaarheid", fontName="Helvetica", fontSize=8.5, fillColor=_color(BRAND_COLORS["text"])))
+    return drawing
 
 
-def chart_words_per_month(stats: pd.DataFrame, output_path: Path) -> None:
-    fig, ax = plt.subplots(figsize=(13.4, 4.2))
-    x_labels = [m[:3] for m in stats["maand"]]
-    x_positions = list(range(len(x_labels)))
-    bars = ax.bar(x_positions, stats["woorden"], color=BRAND_COLORS["red"], alpha=0.92, width=0.62)
-    ax.set_xticks(x_positions, x_labels)
-    ax.set_ylabel("Aantal woorden", color=BRAND_COLORS["text"])
-    ax.set_title(
-        "Aantal vertaalde woorden per maand",
-        color=BRAND_COLORS["text"],
-        loc="left",
-        pad=10,
-        fontsize=15,
-        fontweight="bold",
-    )
-    ax.grid(axis="y", alpha=0.38, color=BRAND_COLORS["grid"], linestyle="--")
-    ax.set_axisbelow(True)
-    ax.spines["top"].set_visible(False)
-    ax.spines["right"].set_visible(False)
-    ax.spines["left"].set_color(BRAND_COLORS["grid"])
-    ax.spines["bottom"].set_color(BRAND_COLORS["grid"])
-    ax.tick_params(axis="x", labelrotation=0, colors=BRAND_COLORS["text"], pad=6)
-    ax.tick_params(axis="y", colors=BRAND_COLORS["text"])
-    for rect in bars:
-        value = int(rect.get_height())
-        if value <= 0:
-            continue
-        ax.annotate(
-            f"{value}",
-            xy=(rect.get_x() + rect.get_width() / 2, rect.get_height()),
-            xytext=(0, 5),
-            textcoords="offset points",
-            ha="center",
-            va="bottom",
-            fontsize=8,
-            color=BRAND_COLORS["text"],
+def chart_words_per_month(stats, width: float = 746, height: float = 232) -> Drawing:
+    drawing = Drawing(width, height)
+    left, bottom, top, right = 42, 28, 26, 28
+    plot_width, plot_height = _add_chart_frame(drawing, width, height, left, bottom, top, right)
+    labels = [str(value)[:3] for value in stats["maand"].tolist()]
+    words = [int(value) for value in stats["woorden"].tolist()]
+    max_words = max(100, int(_safe_max(words, 100)))
+    slot_width = plot_width / max(1, len(labels))
+    bar_width = slot_width * 0.56
+
+    for idx in range(6):
+        y = bottom + (plot_height / 5) * idx
+        drawing.add(Line(left, y, left + plot_width, y, strokeColor=_color(BRAND_COLORS["grid"]), strokeWidth=0.7))
+
+    for idx, label in enumerate(labels):
+        center_x = left + slot_width * idx + slot_width / 2
+        value = words[idx]
+        bar_height = (value / max_words) * (plot_height - 4)
+        bar_x = center_x - bar_width / 2
+        drawing.add(
+            Rect(
+                bar_x,
+                bottom,
+                bar_width,
+                bar_height,
+                fillColor=_color(BRAND_COLORS["red"]),
+                strokeColor=_color(BRAND_COLORS["red"]),
+                rx=2,
+                ry=2,
+            )
         )
-    fig.tight_layout()
-    fig.savefig(output_path, dpi=150)
-    plt.close(fig)
+        if value > 0:
+            drawing.add(
+                String(
+                    center_x,
+                    bottom + bar_height + 5,
+                    str(value),
+                    textAnchor="middle",
+                    fontName="Helvetica",
+                    fontSize=7.5,
+                    fillColor=_color(BRAND_COLORS["text"]),
+                )
+            )
+        drawing.add(
+            String(
+                center_x,
+                12,
+                label,
+                textAnchor="middle",
+                fontName="Helvetica",
+                fontSize=8,
+                fillColor=_color(BRAND_COLORS["text"]),
+            )
+        )
+    return drawing
 
 
-def chart_language_kpis(df: pd.DataFrame, output_path: Path) -> None:
+def _draw_language_bar_chart(drawing: Drawing, x: float, y: float, width: float, height: float, labels: list[str], values: list[int], title: str, fill_color: str):
+    drawing.add(String(x, y + height + 10, title, fontName="Helvetica-Bold", fontSize=11, fillColor=_color(BRAND_COLORS["text"])))
+    max_value = max(1, int(_safe_max(values, 1)))
+    row_height = height / max(1, len(labels))
+    for idx, label in enumerate(labels):
+        row_y = y + height - ((idx + 1) * row_height) + 6
+        drawing.add(String(x, row_y + 3, label, fontName="Helvetica", fontSize=8, fillColor=_color(BRAND_COLORS["text"])))
+        bar_x = x + 110
+        bar_max_width = width - 150
+        bar_width = (values[idx] / max_value) * bar_max_width if max_value else 0
+        drawing.add(Rect(bar_x, row_y, bar_width, 10, fillColor=_color(fill_color), strokeColor=_color(fill_color), rx=2, ry=2))
+        drawing.add(String(bar_x + bar_width + 6, row_y + 2, str(values[idx]), fontName="Helvetica", fontSize=8, fillColor=_color(BRAND_COLORS["text"])))
+
+
+def chart_language_kpis(df, width: float = 738, height: float = 420) -> Drawing:
+    drawing = Drawing(width, height)
     lang_df = df.copy()
     lang_df["brontaal"] = (
         lang_df["brontaal"]
@@ -161,9 +191,7 @@ def chart_language_kpis(df: pd.DataFrame, output_path: Path) -> None:
         .str.strip()
         .replace("", "(onbekend)")
     )
-    lang_df["aantal_vertaalde_woorden"] = pd.to_numeric(
-        lang_df["aantal_vertaalde_woorden"], errors="coerce"
-    ).fillna(0)
+    lang_df["aantal_vertaalde_woorden"] = lang_df["aantal_vertaalde_woorden"].fillna(0).astype(int)
 
     counts = lang_df.groupby("brontaal", dropna=False)["id"].count().sort_values(ascending=False).head(6)
     words = (
@@ -173,82 +201,31 @@ def chart_language_kpis(df: pd.DataFrame, output_path: Path) -> None:
         .head(6)
     )
 
-    if counts.empty:
-        counts = pd.Series([0], index=["Geen data"])
-    if words.empty:
-        words = pd.Series([0], index=["Geen data"])
+    count_labels = counts.index.tolist() or ["Geen data"]
+    count_values = [int(value) for value in counts.values.tolist()] or [0]
+    word_labels = words.index.tolist() or ["Geen data"]
+    word_values = [int(value) for value in words.values.tolist()] or [0]
 
-    word_order = [name for name in counts.index if name in words.index]
-    word_order += [name for name in words.index if name not in word_order]
-    words = words.reindex(word_order).fillna(0)
-
-    fig, axes = plt.subplots(nrows=2, ncols=1, figsize=(13.4, 7.6))
-    labels_counts = counts.index.tolist()
-    x_counts = list(range(len(labels_counts)))
-    bars_counts = axes[0].bar(x_counts, counts.values, color=BRAND_COLORS["navy"], alpha=0.94, width=0.62)
-    axes[0].set_xticks(x_counts, labels_counts)
-    axes[0].set_title(
-        "Aantal opdrachten per brontaal",
-        color=BRAND_COLORS["text"],
-        loc="left",
-        pad=8,
-        fontsize=14,
-        fontweight="bold",
+    _draw_language_bar_chart(
+        drawing,
+        x=18,
+        y=220,
+        width=width - 36,
+        height=150,
+        labels=count_labels,
+        values=count_values,
+        title="Aantal opdrachten per brontaal",
+        fill_color=BRAND_COLORS["navy"],
     )
-    axes[0].grid(axis="y", alpha=0.35, color=BRAND_COLORS["grid"])
-    axes[0].set_axisbelow(True)
-    axes[0].spines["top"].set_visible(False)
-    axes[0].spines["right"].set_visible(False)
-    axes[0].spines["left"].set_color(BRAND_COLORS["grid"])
-    axes[0].spines["bottom"].set_color(BRAND_COLORS["grid"])
-    axes[0].tick_params(axis="x", labelrotation=0, colors=BRAND_COLORS["text"])
-    axes[0].tick_params(axis="y", colors=BRAND_COLORS["text"])
-    for rect in bars_counts:
-        value = int(rect.get_height())
-        axes[0].annotate(
-            f"{value}",
-            xy=(rect.get_x() + rect.get_width() / 2, rect.get_height()),
-            xytext=(0, 4),
-            textcoords="offset points",
-            ha="center",
-            va="bottom",
-            fontsize=8,
-            color=BRAND_COLORS["text"],
-        )
-
-    labels_words = words.index.tolist()
-    x_words = list(range(len(labels_words)))
-    bars_words = axes[1].bar(x_words, words.values, color=BRAND_COLORS["red"], alpha=0.94, width=0.62)
-    axes[1].set_xticks(x_words, labels_words)
-    axes[1].set_title(
-        "Aantal vertaalde woorden per brontaal",
-        color=BRAND_COLORS["text"],
-        loc="left",
-        pad=8,
-        fontsize=14,
-        fontweight="bold",
+    _draw_language_bar_chart(
+        drawing,
+        x=18,
+        y=24,
+        width=width - 36,
+        height=150,
+        labels=word_labels,
+        values=word_values,
+        title="Aantal vertaalde woorden per brontaal",
+        fill_color=BRAND_COLORS["red"],
     )
-    axes[1].grid(axis="y", alpha=0.35, color=BRAND_COLORS["grid"])
-    axes[1].set_axisbelow(True)
-    axes[1].spines["top"].set_visible(False)
-    axes[1].spines["right"].set_visible(False)
-    axes[1].spines["left"].set_color(BRAND_COLORS["grid"])
-    axes[1].spines["bottom"].set_color(BRAND_COLORS["grid"])
-    axes[1].tick_params(axis="x", labelrotation=0, colors=BRAND_COLORS["text"])
-    axes[1].tick_params(axis="y", colors=BRAND_COLORS["text"])
-    for rect in bars_words:
-        value = int(rect.get_height())
-        axes[1].annotate(
-            f"{value}",
-            xy=(rect.get_x() + rect.get_width() / 2, rect.get_height()),
-            xytext=(0, 4),
-            textcoords="offset points",
-            ha="center",
-            va="bottom",
-            fontsize=8,
-            color=BRAND_COLORS["text"],
-        )
-
-    fig.tight_layout()
-    fig.savefig(output_path, dpi=150)
-    plt.close(fig)
+    return drawing
