@@ -96,6 +96,7 @@ function createAuthFlowHelpers({
     authorizeUrl.searchParams.set("redirect_uri", redirectUri);
     authorizeUrl.searchParams.set("response_mode", "query");
     authorizeUrl.searchParams.set("scope", "openid profile email");
+    authorizeUrl.searchParams.set("prompt", "select_account");
     authorizeUrl.searchParams.set("state", state);
     return { state, redirectUri, authorizeUrl: authorizeUrl.toString() };
   }
