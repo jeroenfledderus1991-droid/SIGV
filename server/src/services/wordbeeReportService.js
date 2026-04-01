@@ -24,12 +24,17 @@ function sanitizeFilename(value, fallback) {
 
 function runPythonReportScript({ scriptPath, year, month, timeoutMs = 180000 }) {
   return new Promise((resolve, reject) => {
-    const args = [scriptPath, "--year", String(year), "--month", String(month)];
+    const args = ["-X", "faulthandler", scriptPath, "--year", String(year), "--month", String(month)];
     const pythonCommand = process.platform === "win32" ? "python" : (process.env.PYTHON_BIN || "python3");
     const child = spawn(pythonCommand, args, {
       cwd: path.resolve(path.dirname(scriptPath), ".."),
       windowsHide: true,
       stdio: ["ignore", "pipe", "pipe"],
+      env: {
+        ...process.env,
+        MPLBACKEND: process.env.MPLBACKEND || "Agg",
+        PYTHONUNBUFFERED: "1",
+      },
     });
 
     let stdout = "";
@@ -53,14 +58,15 @@ function runPythonReportScript({ scriptPath, year, month, timeoutMs = 180000 }) 
       reject(error);
     });
 
-    child.on("close", (code) => {
+    child.on("close", (code, signal) => {
       clearTimeout(timer);
       if (timedOut) {
         reject(new Error("PDF rapport generatie duurde te lang en is afgebroken."));
         return;
       }
-      if (code !== 0) {
-        reject(new Error(`Python rapportscript faalde (${code}). ${stderr || stdout || "Unknown error"}`));
+      if (code !== 0 || signal) {
+        const details = stderr || stdout || (signal ? `Proces gestopt met signaal ${signal}.` : "Unknown error");
+        reject(new Error(`Python rapportscript faalde (${code ?? "null"}${signal ? `, signal ${signal}` : ""}). ${details}`));
         return;
       }
       const parsed = parseJsonFromStdout(stdout);
