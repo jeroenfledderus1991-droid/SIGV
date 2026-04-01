@@ -3,7 +3,7 @@ services:
     build:
       context: .
       dockerfile: client/Dockerfile
-    image: template-react-client:latest
+    image: sigv-client:latest
     restart: unless-stopped
     depends_on:
       server:
@@ -19,7 +19,7 @@ services:
     build:
       context: .
       dockerfile: server/Dockerfile
-    image: template-react-server:latest
+    image: sigv-server:latest
     restart: unless-stopped
     expose:
       - "${EXPRESS_PORT:-3102}"
@@ -82,7 +82,7 @@ services:
     build:
       context: .
       dockerfile: dotnet/TemplateApi/Dockerfile
-    image: template-react-dotnet:latest
+    image: sigv-dotnet:latest
     restart: unless-stopped
     expose:
       - "${DOTNET_PORT:-5302}"
