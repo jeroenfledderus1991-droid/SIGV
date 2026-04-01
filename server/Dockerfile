@@ -7,7 +7,11 @@ RUN apt-get update \
         curl \
         gnupg \
         python3 \
-        python3-venv \
+        python3-dotenv \
+        python3-matplotlib \
+        python3-pandas \
+        python3-pyodbc \
+        python3-reportlab \
         unixodbc \
         unixodbc-dev \
         build-essential \
@@ -17,18 +21,10 @@ RUN apt-get update \
     && ACCEPT_EULA=Y apt-get install -y --no-install-recommends msodbcsql18 \
     && rm -rf /var/lib/apt/lists/*
 
-ENV VIRTUAL_ENV=/opt/venv
-RUN python3 -m venv "$VIRTUAL_ENV"
-ENV PATH="$VIRTUAL_ENV/bin:$PATH"
-
 WORKDIR /app/server
 
 COPY server/package.json server/package-lock.json ./
 RUN npm ci --omit=dev
-
-COPY scripts/requirements-wordbee-report.txt /tmp/requirements-wordbee-report.txt
-RUN pip install --no-cache-dir -r /tmp/requirements-wordbee-report.txt \
-    && rm -f /tmp/requirements-wordbee-report.txt
 
 WORKDIR /app
 COPY server/ ./server/
