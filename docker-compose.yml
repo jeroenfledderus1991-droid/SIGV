@@ -9,9 +9,9 @@ services:
       server:
         condition: service_healthy
     ports:
-      - "${EXPRESS_PORT:-5010}:80"
+      - "${CLIENT_PORT:-6017}:80"
     environment:
-      EXPRESS_PORT: "${EXPRESS_PORT:-5010}"
+      EXPRESS_PORT: "${EXPRESS_PORT:-3102}"
     networks:
       - app_internal
 
@@ -22,10 +22,10 @@ services:
     image: template-react-server:latest
     restart: unless-stopped
     expose:
-      - "${EXPRESS_PORT:-5010}"
+      - "${EXPRESS_PORT:-3102}"
     environment:
       ENVIRONMENT: "${ENVIRONMENT:-Production}"
-      EXPRESS_PORT: "${EXPRESS_PORT:-5010}"
+      EXPRESS_PORT: "${EXPRESS_PORT:-3102}"
       CORS_ORIGIN: "${CORS_ORIGIN}"
       TRUST_PROXY: "${TRUST_PROXY:-1}"
       CSRF_ENABLED: "${CSRF_ENABLED:-1}"
@@ -69,7 +69,7 @@ services:
       test:
         [
           "CMD-SHELL",
-          "node -e \"const http=require('http');const p=process.env.EXPRESS_PORT||5010;http.get({host:'127.0.0.1',port:p,path:'/api/health'},r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1));\"",
+          "node -e \"const http=require('http');const p=process.env.EXPRESS_PORT||3102;http.get({host:'127.0.0.1',port:p,path:'/api/health'},r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1));\"",
         ]
       interval: 30s
       timeout: 5s
