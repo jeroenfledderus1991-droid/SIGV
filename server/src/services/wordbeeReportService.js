@@ -25,7 +25,8 @@ function sanitizeFilename(value, fallback) {
 function runPythonReportScript({ scriptPath, year, month, timeoutMs = 180000 }) {
   return new Promise((resolve, reject) => {
     const args = [scriptPath, "--year", String(year), "--month", String(month)];
-    const child = spawn("python", args, {
+    const pythonCommand = process.platform === "win32" ? "python" : (process.env.PYTHON_BIN || "python3");
+    const child = spawn(pythonCommand, args, {
       cwd: path.resolve(path.dirname(scriptPath), ".."),
       windowsHide: true,
       stdio: ["ignore", "pipe", "pipe"],
