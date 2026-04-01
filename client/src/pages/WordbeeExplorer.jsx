@@ -377,7 +377,7 @@ export default function WordbeeExplorer() {
               exportEnabled
               searchEnabled
               rowsPerPage={DEFAULT_ROWS_PER_PAGE}
-              horizontalScroll="auto"
+              horizontalScroll="on"
               actionsColumnWidth={96}
               enableColumnCustomization
               noDataMessage="Geen data beschikbaar."

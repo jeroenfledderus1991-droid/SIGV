@@ -269,6 +269,16 @@ export default function ClientTableWrapper({
   }, [tableId, columnKeys, columnOrder, hiddenColumns, columnWidthOverrides, rowsPerPageSelection]);
 
   useEffect(() => {
+    if (
+      horizontalScroll === true ||
+      horizontalScroll === false ||
+      horizontalScroll === "on" ||
+      horizontalScroll === "off"
+    ) {
+      setContainerWidth(0);
+      return undefined;
+    }
+
     const element = containerRef.current;
     if (!element) {
       return undefined;
@@ -293,7 +303,7 @@ export default function ClientTableWrapper({
         resizeObserver.disconnect();
       }
     };
-  }, []);
+  }, [horizontalScroll]);
 
   useEffect(() => {
     const options = {
