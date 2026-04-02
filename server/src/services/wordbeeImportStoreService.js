@@ -4,6 +4,7 @@ const FLAT_COLUMNS = [
   { label: "Kenmerk", db: "kenmerk" },
   { label: "Aanvraagnummer", db: "aanvraagnummer" },
   { label: "Status", db: "status" },
+  { label: "Comments", db: "comments" },
   { label: "Brontaal", db: "brontaal" },
   { label: "Datum van ontvangst", db: "datum_van_ontvangst" },
   { label: "Deadline", db: "deadline" },
@@ -165,6 +166,30 @@ function buildManualDiff(sourceRow, editedRow) {
 }
 
 function createWordbeeImportStoreService({ db }) {
+  async function pruneRowsForYear(periodYear, maxMonth, keepRowKeys) {
+    const pool = await db.getPool();
+    const request = pool.request();
+    request.input("period_year", Number(periodYear));
+    request.input("max_month", Number(maxMonth));
+    request.input("keep_row_keys", JSON.stringify(Array.isArray(keepRowKeys) ? keepRowKeys : []));
+    const result = await request.query(`
+      DELETE FROM dbo.tbl_wordbee_import_rows
+      WHERE period_year = @period_year
+        AND (
+          period_month > @max_month
+          OR (
+            period_month <= @max_month
+            AND row_key NOT IN (
+              SELECT CONVERT(NVARCHAR(220), [value])
+              FROM OPENJSON(@keep_row_keys)
+            )
+          )
+        );
+      SELECT @@ROWCOUNT AS deleted_count;
+    `);
+    return Number(result.recordset?.[0]?.deleted_count || 0);
+  }
+
   async function listRowsAll() {
     const pool = await db.getPool();
     const result = await pool.request().query(`
@@ -224,6 +249,38 @@ ${FLAT_SELECT_SQL},
     };
   }
 
+  async function listRowsUpToMonth(periodYear, periodMonth) {
+    const pool = await db.getPool();
+    const request = pool.request();
+    request.input("period_year", Number(periodYear));
+    request.input("period_month", Number(periodMonth));
+    const result = await request.query(`
+      SELECT
+        id,
+        row_key,
+        period_year,
+        period_month,
+        external_id,
+        source_hash,
+        source_json,
+        manual_json,
+${FLAT_SELECT_SQL},
+        created_at,
+        imported_at,
+        updated_at,
+        manual_updated_at
+      FROM dbo.vw_wordbee_import_rows
+      WHERE period_year = @period_year
+        AND period_month <= @period_month
+      ORDER BY period_month ASC, id DESC
+    `);
+    const rows = (result.recordset || []).map((record) => mapRecordToResponseRow(record));
+    return {
+      rows,
+      count: rows.length,
+    };
+  }
+
   async function upsertImportedRows(periodYear, periodMonth, sourceRows) {
     const year = Number(periodYear);
     const month = Number(periodMonth);
@@ -231,6 +288,7 @@ ${FLAT_SELECT_SQL},
     let inserted = 0;
     let updated = 0;
     let unchanged = 0;
+    const keepRowKeys = [];
 
     const pool = await db.getPool();
     for (const row of rows) {
@@ -239,6 +297,9 @@ ${FLAT_SELECT_SQL},
       const periodTag = toPeriodTag(rowYear, rowMonth);
       const identity = resolveRowIdentity(row);
       const rowKey = `${periodTag}-${sanitizeKeyPart(identity.externalId)}-${identity.signatureHash}`;
+      if (rowYear === year && rowMonth <= month) {
+        keepRowKeys.push(rowKey);
+      }
       const sourcePayload = stripMetaFields(row);
       const sourceJson = stableStringify(sourcePayload);
       const sourceHash = createHash(sourceJson);
@@ -323,6 +384,7 @@ ${FLAT_UPDATE_SET_SQL},
       `);
       unchanged += 1;
     }
+    const deleted = await pruneRowsForYear(year, month, keepRowKeys);
 
     return {
       periodYear: year,
@@ -331,6 +393,7 @@ ${FLAT_UPDATE_SET_SQL},
       inserted,
       updated,
       unchanged,
+      deleted,
     };
   }
 
@@ -400,6 +463,7 @@ ${FLAT_SELECT_SQL},
   return {
     listRowsAll,
     listRows,
+    listRowsUpToMonth,
     upsertImportedRows,
     saveManualRow,
   };

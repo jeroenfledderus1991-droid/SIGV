@@ -15,6 +15,10 @@ def _safe_max(values, fallback: float = 1.0) -> float:
     return max(numeric) if numeric else fallback
 
 
+def _format_int_label(value: int) -> str:
+    return f"{int(value):,}".replace(",", ".")
+
+
 def _add_chart_frame(drawing: Drawing, width: float, height: float, left: float, bottom: float, top: float, right: float):
     plot_width = width - left - right
     plot_height = height - bottom - top
@@ -135,22 +139,23 @@ def chart_words_per_month(stats, width: float = 746, height: float = 232) -> Dra
                 bottom,
                 bar_width,
                 bar_height,
-                fillColor=_color(BRAND_COLORS["red"]),
-                strokeColor=_color(BRAND_COLORS["red"]),
+                fillColor=_color(BRAND_COLORS["navy"]),
+                strokeColor=_color(BRAND_COLORS["navy"]),
                 rx=2,
                 ry=2,
             )
         )
         if value > 0:
+            label_y = bottom + max(10, bar_height - 14)
             drawing.add(
                 String(
                     center_x,
-                    bottom + bar_height + 5,
-                    str(value),
+                    label_y,
+                    _format_int_label(value),
                     textAnchor="middle",
-                    fontName="Helvetica",
+                    fontName="Helvetica-Bold",
                     fontSize=7.5,
-                    fillColor=_color(BRAND_COLORS["text"]),
+                    fillColor=colors.white,
                 )
             )
         drawing.add(

@@ -68,9 +68,9 @@ const PAGE_PATTERNS = [
 const DEFAULT_SETTINGS = {
   theme: "light",
   display_mode: "full",
-  accent_color: "#2c5f41",
+  accent_color: "#121c5a",
   accent_text_color: "#ffffff",
-  sidebar_variant: "accent-gradient",
+  sidebar_variant: "white",
   gradient_intensity: 30,
   table_tint: "mint",
   container_tint: "mint",

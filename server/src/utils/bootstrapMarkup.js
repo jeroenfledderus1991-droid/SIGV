@@ -1,6 +1,6 @@
 function hexToRgb(hex) {
   const clean = hex.replace("#", "");
-  if (clean.length !== 6) return [44, 95, 65];
+  if (clean.length !== 6) return [18, 28, 90];
   return [0, 2, 4].map((offset) => parseInt(clean.slice(offset, offset + 2), 16));
 }
 

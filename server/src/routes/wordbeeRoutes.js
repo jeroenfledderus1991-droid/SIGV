@@ -81,7 +81,11 @@ function registerWordbeeRoutes({
   app.get("/api/wordbee/imported-rows", requireAuth, requirePermission("/settings*"), async (req, res) => {
     if (!(await ensureDbConfigured(res))) return;
     try {
-      const data = await importStore.listRowsAll();
+      const year = Number(req.query?.year);
+      const month = Number(req.query?.month);
+      const data = isValidPeriod(year, month)
+        ? await importStore.listRowsUpToMonth(year, month)
+        : await importStore.listRowsAll();
       return res.status(200).json({
         ok: true,
         count: data.count,

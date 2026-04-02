@@ -142,6 +142,22 @@
   z-index: 15;
 }
 
+.wordbee-page .standard-table tbody tr.wordbee-complaint-row {
+  background: color-mix(in srgb, #c11f40 12%, var(--table-row-bg));
+}
+
+.wordbee-page .standard-table tbody tr.wordbee-complaint-row:hover {
+  background: color-mix(in srgb, #c11f40 18%, var(--table-row-hover-bg));
+}
+
+.wordbee-page .standard-table tbody tr.wordbee-complaint-row .actions-column {
+  background: color-mix(in srgb, #c11f40 12%, var(--table-row-bg));
+}
+
+.wordbee-page .standard-table tbody tr.wordbee-complaint-row:hover .actions-column {
+  background: color-mix(in srgb, #c11f40 18%, var(--table-row-hover-bg));
+}
+
 .wordbee-page .wordbee-progress {
   margin-top: 10px;
   padding: 10px 12px;

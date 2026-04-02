@@ -1,14 +1,17 @@
 import argparse
 import json
 import os
+import re
+import unicodedata
 from datetime import datetime
+from difflib import SequenceMatcher
 from pathlib import Path
 
 import pandas as pd
 import pyodbc
 from dotenv import load_dotenv
 
-from wordbee_report.charts import chart_jobs_and_late, chart_language_kpis, chart_words_per_month
+from wordbee_report.charts import chart_jobs_and_late, chart_words_per_month
 from wordbee_report.pdf_report import build_pdf_report
 
 
@@ -78,6 +81,7 @@ def fetch_report_data(conn: pyodbc.Connection, year: int, month: int) -> pd.Data
             kenmerk,
             aanvraagnummer,
             status,
+            comments,
             brontaal,
             datum_van_ontvangst,
             deadline,
@@ -130,16 +134,56 @@ def parse_nl_datetime(value) -> pd.Timestamp:
     return pd.to_datetime(text, errors="coerce", dayfirst=True)
 
 
+def normalize_matching_text(value) -> str:
+    text = str(value or "").strip().lower()
+    if not text:
+        return ""
+    text = unicodedata.normalize("NFKD", text)
+    text = "".join(ch for ch in text if not unicodedata.combining(ch))
+    text = re.sub(r"[^a-z0-9]+", " ", text)
+    return re.sub(r"\s+", " ", text).strip()
+
+
+def fuzzy_contains_phrase(value, phrase: str, min_ratio: float = 0.86) -> bool:
+    normalized_text = normalize_matching_text(value)
+    normalized_phrase = normalize_matching_text(phrase)
+    if not normalized_text or not normalized_phrase:
+        return False
+    compact_text = normalized_text.replace(" ", "")
+    compact_phrase = normalized_phrase.replace(" ", "")
+    if normalized_phrase in normalized_text or compact_phrase in compact_text:
+        return True
+
+    phrase_len = len(compact_phrase)
+    if phrase_len == 0 or len(compact_text) < max(4, phrase_len - 4):
+        return False
+
+    min_window = max(4, phrase_len - 4)
+    max_window = min(len(compact_text), phrase_len + 4)
+    for window_len in range(min_window, max_window + 1):
+        for start_idx in range(0, len(compact_text) - window_len + 1):
+            candidate = compact_text[start_idx:start_idx + window_len]
+            if SequenceMatcher(None, candidate, compact_phrase).ratio() >= min_ratio:
+                return True
+    return False
+
+
 def prepare_dataframe(df: pd.DataFrame) -> pd.DataFrame:
     prepared = df.copy()
     if "clientnaam" not in prepared.columns:
         prepared["clientnaam"] = ""
+    if "comments" not in prepared.columns:
+        prepared["comments"] = ""
     prepared["deadline_dt"] = prepared["deadline"].apply(parse_nl_datetime)
     prepared["aanvaarde_dt"] = prepared["aanvaarde_datum"].apply(parse_nl_datetime)
     prepared["ontvangst_dt"] = prepared["datum_van_ontvangst"].apply(parse_nl_datetime)
+    prepared["comments"] = prepared["comments"].fillna("").astype(str).str.strip()
     prepared["aantal_vertaalde_woorden"] = pd.to_numeric(
         prepared["aantal_vertaalde_woorden"], errors="coerce"
     ).fillna(0)
+    prepared["is_niet_levering_comment"] = prepared["comments"].apply(
+        lambda value: fuzzy_contains_phrase(value, "leveringsverklaring")
+    )
     prepared["is_late"] = (
         prepared["deadline_dt"].notna()
         & prepared["aanvaarde_dt"].notna()
@@ -195,10 +239,7 @@ def build_monthly_stats(df: pd.DataFrame, year: int, month: int) -> pd.DataFrame
             pct_late = (te_laat / opdrachten) * 100 if opdrachten else 0.0
             leverbetrouwbaarheid = (1.0 - (te_laat / opdrachten)) * 100.0 if opdrachten else 0.0
             words = int(month_df["aantal_vertaalde_woorden"].sum()) if opdrachten else 0
-            status_values = month_df["status"].fillna("").astype(str).str.lower()
-            niet_leveringen = int(
-                status_values.str.contains(r"niet[\s-]*lever|niet geleverd|niet\-geleverd|geannuleerd|cancelled|canceled", regex=True).sum()
-            ) if opdrachten else 0
+            niet_leveringen = int(month_df["is_niet_levering_comment"].sum()) if opdrachten else 0
         kwaliteit = 100.0 - ((niet_leveringen / opdrachten) * 100.0) if opdrachten else 100.0
         rows.append(
             {
@@ -239,6 +280,78 @@ def build_monthly_complaint_stats(df: pd.DataFrame, complaints_df: pd.DataFrame,
             }
         )
     return pd.DataFrame(rows)
+
+
+def build_monthly_language_stats(df: pd.DataFrame, month: int, top_n: int = 6) -> dict:
+    prepared = df.copy()
+    prepared["brontaal"] = (
+        prepared["brontaal"]
+        .fillna("(onbekend)")
+        .astype(str)
+        .str.strip()
+        .replace("", "(onbekend)")
+    )
+    prepared["aantal_vertaalde_woorden"] = pd.to_numeric(
+        prepared["aantal_vertaalde_woorden"], errors="coerce"
+    ).fillna(0).astype(int)
+    prepared = prepared[prepared["period_month"].between(1, month)]
+
+    month_numbers = list(range(1, 13))
+    month_labels = [MONTH_LABELS_NL[month_idx][:3].capitalize() for month_idx in month_numbers]
+
+    if prepared.empty:
+        zero_values = [0 for _ in month_numbers]
+        return {
+            "month_labels": month_labels,
+            "job_rows": [{"label": "Geen data", "values": zero_values, "total": 0}],
+            "word_rows": [{"label": "Geen data", "values": zero_values, "total": 0}],
+            "top_n": top_n,
+            "includes_other": False,
+        }
+
+    language_totals = (
+        prepared.groupby("brontaal", dropna=False)["id"]
+        .count()
+        .sort_values(ascending=False)
+    )
+    top_languages = language_totals.head(top_n).index.tolist()
+    includes_other = len(language_totals.index) > len(top_languages)
+
+    filtered = prepared.copy()
+    if includes_other:
+        filtered["language_group"] = filtered["brontaal"].where(
+            filtered["brontaal"].isin(top_languages),
+            "Overige",
+        )
+        ordered_languages = top_languages + ["Overige"]
+    else:
+        filtered["language_group"] = filtered["brontaal"]
+        ordered_languages = top_languages
+
+    def build_rows(value_column: str, agg_func: str) -> list[dict]:
+        pivot = (
+            filtered.groupby(["language_group", "period_month"], dropna=False)[value_column]
+            .agg(agg_func)
+            .unstack(fill_value=0)
+            .reindex(index=ordered_languages, columns=month_numbers, fill_value=0)
+        )
+        rows = []
+        for label, values in pivot.iterrows():
+            numbers = [int(value) for value in values.tolist()]
+            rows.append({
+                "label": label,
+                "values": numbers,
+                "total": int(sum(numbers)),
+            })
+        return rows
+
+    return {
+        "month_labels": month_labels,
+        "job_rows": build_rows("id", "count"),
+        "word_rows": build_rows("aantal_vertaalde_woorden", "sum"),
+        "top_n": top_n,
+        "includes_other": includes_other,
+    }
 
 
 def parse_args() -> argparse.Namespace:
@@ -284,7 +397,7 @@ def main() -> None:
 
     jobs_chart = chart_jobs_and_late(stats)
     words_chart = chart_words_per_month(stats)
-    language_kpi_chart = chart_language_kpis(df)
+    language_stats = build_monthly_language_stats(df, args.month)
 
     build_pdf_report(
         output_pdf,
@@ -296,7 +409,7 @@ def main() -> None:
         df,
         jobs_chart,
         words_chart,
-        language_kpi_chart,
+        language_stats,
         logo_path,
     )
 

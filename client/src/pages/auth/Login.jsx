@@ -45,12 +45,12 @@ export default function Login() {
     const root = document.documentElement;
     const body = document.body;
     const theme = settings.theme || "light";
-    const accentColor = settings.accentColor || "#2c5f41";
+    const accentColor = settings.accentColor || "#121c5a";
     const accentTextColor = settings.accentTextColor || "#ffffff";
     const gradientIntensity = Number.isFinite(settings.gradientIntensity) ? settings.gradientIntensity : 30;
     const hexToRgb = (hex) => {
       const clean = hex.replace("#", "");
-      if (clean.length !== 6) return [44, 95, 65];
+      if (clean.length !== 6) return [18, 28, 90];
       return [0, 2, 4].map((offset) => parseInt(clean.slice(offset, offset + 2), 16));
     };
     const mixWithBlack = (hex, intensity) => {

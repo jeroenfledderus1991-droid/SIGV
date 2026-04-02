@@ -50,7 +50,7 @@ IF OBJECT_ID('dbo.tbl_user_settings','U') IS NOT NULL AND COL_LENGTH('dbo.tbl_us
 GO
 -- Default vullen voor bestaande records
 IF OBJECT_ID('dbo.tbl_user_settings','U') IS NOT NULL
-    UPDATE dbo.tbl_user_settings SET sidebar_variant = 'accent-gradient' WHERE sidebar_variant IS NULL;
+    UPDATE dbo.tbl_user_settings SET sidebar_variant = 'white' WHERE sidebar_variant IS NULL;
 GO
 IF OBJECT_ID('dbo.tbl_user_settings','U') IS NOT NULL
     UPDATE dbo.tbl_user_settings SET gradient_intensity = 30 WHERE gradient_intensity IS NULL;

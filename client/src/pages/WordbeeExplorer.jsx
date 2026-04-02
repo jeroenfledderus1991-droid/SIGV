@@ -36,14 +36,16 @@ export default function WordbeeExplorer() {
   const now = new Date();
   const currentYear = now.getFullYear();
   const currentMonth = now.getMonth() + 1;
+  const defaultSelectedMonth = currentMonth === 1 ? 12 : currentMonth - 1;
+  const defaultSelectedYear = currentMonth === 1 ? currentYear - 1 : currentYear;
 
   const yearOptions = useMemo(
     () => Array.from({ length: 8 }, (_, index) => currentYear - 3 + index),
     [currentYear]
   );
 
-  const [selectedYear, setSelectedYear] = useState(currentYear);
-  const [selectedMonth, setSelectedMonth] = useState(currentMonth);
+  const [selectedYear, setSelectedYear] = useState(defaultSelectedYear);
+  const [selectedMonth, setSelectedMonth] = useState(defaultSelectedMonth);
   const [rows, setRows] = useState([]);
   const [loadingRows, setLoadingRows] = useState(false);
   const [importing, setImporting] = useState(false);
@@ -77,6 +79,13 @@ export default function WordbeeExplorer() {
     );
     return normalizeRows(rawRows).map((row) => {
       const complaint = complaintsByKenmerk.get(String(row?.Kenmerk || "").trim());
+      const hasComplaint = Boolean(
+        complaint?.id ||
+        complaint?.complaintText ||
+        complaint?.actionsTaken ||
+        complaint?.complaintDate ||
+        complaint?.resolvedDate
+      );
       return {
         ...row,
         __complaint_id: complaint?.id || null,
@@ -85,33 +94,43 @@ export default function WordbeeExplorer() {
         __complaint_actions_taken: complaint?.actionsTaken || "",
         __complaint_resolved_date: complaint?.resolvedDate || "",
         __complaint_updated_at: complaint?.updatedAt || null,
+        __has_complaint: hasComplaint,
         Klacht: complaint?.complaintText || "",
       };
     });
   }, []);
 
-  const loadRows = useCallback(async () => {
+  const loadRows = useCallback(async (year, month) => {
+    const targetYear = Number(year);
+    const targetMonth = Number(month);
     setLoadingRows(true);
     setLoadedInfo("");
     try {
+      const rowsPath = Number.isInteger(targetYear) && Number.isInteger(targetMonth)
+        ? `/wordbee/imported-rows?year=${targetYear}&month=${targetMonth}`
+        : "/wordbee/imported-rows";
       const [rowsPayload, complaintsPayload] = await Promise.all([
-        getJson("/wordbee/imported-rows"),
+        getJson(rowsPath),
         getJson("/wordbee/complaints"),
       ]);
       const mergedRows = mergeRowsWithComplaints(rowsPayload?.rows || [], complaintsPayload?.complaints || []);
       setRows(mergedRows);
-      setLoadedInfo(`${mergedRows.length} regels geladen (alle periodes).`);
+      if (Number.isInteger(targetYear) && Number.isInteger(targetMonth)) {
+        setLoadedInfo(`${mergedRows.length} regels geladen voor ${targetYear} t/m maand ${targetMonth}.`);
+      } else {
+        setLoadedInfo(`${mergedRows.length} regels geladen.`);
+      }
     } catch (loadError) {
       setRows([]);
       setError(toMessage(loadError));
     } finally {
       setLoadingRows(false);
     }
-  }, []);
+  }, [mergeRowsWithComplaints]);
 
   useEffect(() => {
-    loadRows();
-  }, [loadRows]);
+    loadRows(selectedYear, selectedMonth);
+  }, [loadRows, selectedYear, selectedMonth]);
   useEffect(() => {
     setReportDirectoryLabel(getCachedDirectoryName(userCacheSegment));
   }, [userCacheSegment]);
@@ -144,6 +163,9 @@ export default function WordbeeExplorer() {
     setImporting(true);
     setImportStartedAt(Date.now());
     setImportElapsedSeconds(0);
+    setRows([]);
+    setLoadingRows(true);
+    setLoadedInfo("");
     setError("");
     setStatus("API-data ophalen gestart...");
     try {
@@ -157,15 +179,16 @@ export default function WordbeeExplorer() {
         ? ` Let op: snelle scan gebruikt (${payload?.scanLimit || 0} projecten), mogelijk niet volledig.`
         : "";
       setStatus(
-        `API-data ${periodTag} opgehaald. Nieuw: ${sync.inserted || 0}, bijgewerkt: ${sync.updated || 0}, ongewijzigd: ${sync.unchanged || 0}.${warning}`
+        `API-data ${periodTag} opgehaald. Nieuw: ${sync.inserted || 0}, bijgewerkt: ${sync.updated || 0}, ongewijzigd: ${sync.unchanged || 0}, verwijderd: ${sync.deleted || 0}.${warning}`
       );
-      await loadRows();
+      await loadRows(selectedYear, selectedMonth);
     } catch (importError) {
       setStatus("");
       setError(toMessage(importError));
     } finally {
       setImporting(false);
       setImportStartedAt(null);
+      setLoadingRows(false);
     }
   };
 
@@ -261,6 +284,7 @@ export default function WordbeeExplorer() {
             __complaint_actions_taken: savedComplaint?.actionsTaken || "",
             __complaint_resolved_date: savedComplaint?.resolvedDate || "",
             __complaint_updated_at: savedComplaint?.updatedAt || null,
+            __has_complaint: Boolean(savedComplaint),
             Klacht: savedComplaint?.complaintText || "",
           };
         })
@@ -336,7 +360,7 @@ export default function WordbeeExplorer() {
             </button>
           </div>
           <p className="wordbee-muted">
-            Er wordt altijd het hele jaar opgehaald t/m de gekozen maand. Bestaande handmatige klachten blijven gekoppeld.
+            Er wordt altijd het hele jaar opgehaald t/m de gekozen maand en de tabel toont alleen die selectie. Bestaande handmatige klachten blijven gekoppeld.
           </p>
           {reportDirectoryLabel && (
             <p className="wordbee-muted">PDF-map: {reportDirectoryLabel}</p>
@@ -381,6 +405,7 @@ export default function WordbeeExplorer() {
               actionsColumnWidth={96}
               enableColumnCustomization
               noDataMessage="Geen data beschikbaar."
+              rowClassName={(row) => (row?.__has_complaint ? "wordbee-complaint-row" : "")}
             />
           )}
         </section>

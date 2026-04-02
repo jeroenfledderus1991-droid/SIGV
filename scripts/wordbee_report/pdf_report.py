@@ -29,7 +29,13 @@ def truncate_text(value, max_len: int = 110) -> str:
     return f"{text[: max_len - 1]}..."
 
 
-def build_monthly_status_overview(df: pd.DataFrame, month: int) -> list[tuple[str, list[int]]]:
+def calculate_quality_score(total_issues: int, total_items: int) -> float:
+    if not total_items:
+        return 0.0
+    return max(0.0, 100.0 - ((total_issues / total_items) * 100.0))
+
+
+def build_monthly_status_overview(df: pd.DataFrame, month: int) -> tuple[list[tuple[str, list[int]]], pd.DataFrame]:
     statuses = [
         "Verzoek",
         "In uitvoering",
@@ -37,6 +43,10 @@ def build_monthly_status_overview(df: pd.DataFrame, month: int) -> list[tuple[st
         "Resultaten goedgekeurd",
         "Geannuleerd",
     ]
+    comments = df["comments"].fillna("").astype(str).str.strip() if "comments" in df.columns else pd.Series("", index=df.index)
+    status_values = df["status"].fillna("").astype(str).str.strip().str.lower()
+    ari_request_mask = status_values.eq("verzoek") & comments.str.upper().eq("ARI")
+    ari_request_df = df.loc[ari_request_mask].copy()
     overview = []
     for status_name in statuses:
         counts = []
@@ -50,7 +60,16 @@ def build_monthly_status_overview(df: pd.DataFrame, month: int) -> list[tuple[st
             )
             counts.append(month_status_count)
         overview.append((status_name, counts))
-    return overview
+        if status_name == "Verzoek":
+            ari_counts = []
+            for month_idx in range(1, 13):
+                if month_idx > month:
+                    ari_counts.append(0)
+                    continue
+                month_ari_count = int(ari_request_df[ari_request_df["period_month"] == month_idx].shape[0])
+                ari_counts.append(month_ari_count)
+            overview.append(("Verzoek (ARI)", ari_counts))
+    return overview, ari_request_df
 
 
 def _append_cover(story: list, logo_path: Path | None, month_label: str, year: int, generated_at: str, styles_map: dict) -> None:
@@ -86,6 +105,64 @@ def _apply_summary_table_style(table: Table, header_color: str) -> None:
     )
 
 
+def _apply_single_header_table_style(table: Table, header_color: str, emphasize_last_row: bool = False) -> None:
+    style_commands = [
+        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor(header_color)),
+        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+        ("ALIGN", (1, 0), (-1, -1), "CENTER"),
+        ("ALIGN", (0, 0), (0, -1), "LEFT"),
+        ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor(BRAND_COLORS["warm_dark"])),
+        ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#FBF8F5")]),
+        ("TEXTCOLOR", (0, 1), (-1, -1), colors.HexColor(BRAND_COLORS["navy"])),
+        ("FONTSIZE", (0, 0), (-1, -1), 8.4),
+        ("BOTTOMPADDING", (0, 0), (-1, 0), 6),
+        ("TOPPADDING", (0, 0), (-1, 0), 6),
+        ("FONTNAME", (0, 1), (0, -1), "Helvetica-Bold"),
+    ]
+    if emphasize_last_row:
+        style_commands.extend([
+            ("BACKGROUND", (0, -1), (-1, -1), colors.HexColor("#EFE7DF")),
+            ("FONTNAME", (0, -1), (-1, -1), "Helvetica-Bold"),
+        ])
+    table.setStyle(TableStyle(style_commands))
+
+
+def _build_language_table_rows(rows: list[dict], month_labels: list[str]) -> list[list[str]]:
+    totals_per_month = [0 for _ in month_labels]
+    total_all = 0
+    body_rows = []
+    for row in rows:
+        values = [int(value) for value in row["values"]]
+        for index, value in enumerate(values):
+            totals_per_month[index] += value
+        total_all += int(row["total"])
+        body_rows.append([row["label"], *[format_int(value) for value in values], format_int(row["total"])])
+    return [
+        ["Brontaal", *month_labels, "Totaal"],
+        *body_rows,
+        ["Totaal", *[format_int(value) for value in totals_per_month], format_int(total_all)],
+    ]
+
+
+def _build_ari_request_rows(df: pd.DataFrame) -> list[list[str]]:
+    rows = [["Maand", "Kenmerk", "Aanvraagnummer", "Status", "Comments"]]
+    if df.empty:
+        rows.append(["-", "-", "-", "-", "Geen verzoekregels met comment 'ARI'."])
+        return rows
+    month_lookup = {1: "Jan", 2: "Feb", 3: "Maa", 4: "Apr", 5: "Mei", 6: "Jun", 7: "Jul", 8: "Aug", 9: "Sep", 10: "Okt", 11: "Nov", 12: "Dec"}
+    sorted_df = df.sort_values(["period_month", "aanvraagnummer", "kenmerk"], ascending=[True, True, True])
+    for _, row in sorted_df.iterrows():
+        rows.append([
+            month_lookup.get(int(row.get("period_month") or 0), "-"),
+            truncate_text(row.get("kenmerk"), 24),
+            truncate_text(row.get("aanvraagnummer"), 20),
+            truncate_text(row.get("status"), 24),
+            truncate_text(row.get("comments"), 70),
+        ])
+    return rows
+
+
 def build_pdf_report(
     output_pdf: Path,
     year: int,
@@ -96,7 +173,7 @@ def build_pdf_report(
     df: pd.DataFrame,
     jobs_chart,
     words_chart,
-    language_kpi_chart,
+    language_stats: dict,
     logo_path: Path | None = None,
 ) -> None:
     doc = SimpleDocTemplate(
@@ -193,16 +270,21 @@ def build_pdf_report(
 
     total_opdrachten = sum(month_opdrachten)
     total_niet_leveringen = sum(month_niet_leveringen)
-    total_kwaliteit = sum(month_kwaliteit) / len(month_kwaliteit) if month_kwaliteit else 0.0
+    total_kwaliteit = calculate_quality_score(total_niet_leveringen, total_opdrachten)
     total_woorden = sum(month_woorden)
     total_klachten = sum(month_klachten)
-    total_klacht_kwaliteit = sum(month_klacht_kwaliteit) / len(month_klacht_kwaliteit) if month_klacht_kwaliteit else 0.0
+    total_klacht_kwaliteit = calculate_quality_score(total_klachten, total_opdrachten)
 
     available_width_cm = (doc.pagesize[0] - doc.leftMargin - doc.rightMargin) / cm
     first_col_cm = 4.5
     period_col_count = len(month_labels) + 1
     period_col_cm = max(1.2, (available_width_cm - first_col_cm) / period_col_count)
     full_width_col_sizes = [first_col_cm * cm] + [period_col_cm * cm for _ in range(period_col_count)]
+    language_month_labels = language_stats.get("month_labels", []) or month_labels
+    language_period_col_count = len(language_month_labels) + 1
+    language_first_col_cm = 3.4
+    language_period_col_cm = max(1.0, (available_width_cm - language_first_col_cm) / max(1, language_period_col_count))
+    language_col_sizes = [language_first_col_cm * cm] + [language_period_col_cm * cm for _ in range(language_period_col_count)]
 
     _append_cover(story, logo_path, month_label, year, generated_at, styles_map)
 
@@ -308,12 +390,27 @@ def build_pdf_report(
     story.append(PageBreak())
 
     story.append(Paragraph("Taalanalyse", kpi_title_style))
-    story.append(Paragraph("Aantal opdrachten en aantal vertaalde woorden per brontaal.", kpi_subtitle_style))
-    story.append(renderPDF.GraphicsFlowable(language_kpi_chart))
+    top_n = int(language_stats.get("top_n", 0) or 0)
+    includes_other = bool(language_stats.get("includes_other"))
+    language_scope_text = f"Top {top_n} brontalen" if top_n else "Brontalen"
+    if includes_other:
+        language_scope_text += " plus 'Overige'"
+    story.append(Paragraph(f"{language_scope_text}, uitgesplitst per maand.", kpi_subtitle_style))
+    language_jobs_rows = _build_language_table_rows(language_stats.get("job_rows", []), language_month_labels)
+    language_jobs_table = Table(language_jobs_rows, colWidths=language_col_sizes, hAlign="LEFT")
+    _apply_single_header_table_style(language_jobs_table, BRAND_COLORS["navy"], emphasize_last_row=True)
+    story.append(Paragraph("Aantal opdrachten per brontaal", body_style))
+    story.append(language_jobs_table)
+    story.append(Spacer(1, 0.25 * cm))
+    language_words_rows = _build_language_table_rows(language_stats.get("word_rows", []), language_month_labels)
+    language_words_table = Table(language_words_rows, colWidths=language_col_sizes, hAlign="LEFT")
+    _apply_single_header_table_style(language_words_table, BRAND_COLORS["red"], emphasize_last_row=True)
+    story.append(Paragraph("Aantal vertaalde woorden per brontaal", body_style))
+    story.append(language_words_table)
     story.append(PageBreak())
 
     story.append(Paragraph("Overzicht | Statussen vertalingen per maand", kpi_title_style))
-    status_overview = build_monthly_status_overview(df, month)
+    status_overview, ari_request_df = build_monthly_status_overview(df, month)
     status_rows = [["Status", *month_labels, "Totaal"]]
     for status_name, counts in status_overview:
         status_rows.append([status_name, *[format_int(v) for v in counts], format_int(sum(counts))])
@@ -336,6 +433,17 @@ def build_pdf_report(
         )
     )
     story.append(status_table)
+    story.append(Spacer(1, 0.22 * cm))
+    story.append(Paragraph("Details | Verzoek (ARI)", body_style))
+    ari_rows = _build_ari_request_rows(ari_request_df)
+    ari_table = Table(
+        ari_rows,
+        colWidths=[1.5 * cm, 3.4 * cm, 2.8 * cm, 3.2 * cm, available_width_cm * cm - (1.5 + 3.4 + 2.8 + 3.2) * cm],
+        repeatRows=1,
+        hAlign="LEFT",
+    )
+    _apply_single_header_table_style(ari_table, BRAND_COLORS["navy"])
+    story.append(ari_table)
 
     def draw_page_chrome(canvas, doc_template) -> None:
         page_number = canvas.getPageNumber()

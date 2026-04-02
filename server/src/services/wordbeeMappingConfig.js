@@ -2,6 +2,7 @@ const MAPPED_COLUMNS = [
   "Kenmerk",
   "Aanvraagnummer",
   "Status",
+  "Comments",
   "Brontaal",
   "Datum van ontvangst",
   "Deadline",

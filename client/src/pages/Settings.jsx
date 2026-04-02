@@ -12,7 +12,7 @@ import {
   resolveTableTintSwatch,
 } from "../tableTintPresets";
 
-const DEFAULT_ACCENT = "#2c5f41";
+const DEFAULT_ACCENT = "#121c5a";
 const THEME_OPTIONS = [
   { value: "light", label: "Licht", icon: "fa-sun", demoClass: "light-demo" },
   { value: "dark", label: "Donker", icon: "fa-moon", demoClass: "dark-demo" },

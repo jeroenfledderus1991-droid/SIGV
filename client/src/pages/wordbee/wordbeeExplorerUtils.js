@@ -17,6 +17,7 @@ export const PREFERRED_COLUMN_ORDER = [
   "Kenmerk",
   "Aanvraagnummer",
   "Status",
+  "Comments",
   "Brontaal",
   "Datum van ontvangst",
   "Deadline",

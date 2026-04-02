@@ -15,9 +15,9 @@
     --text-muted: #6c757d; /* Iets donkerder dan standaard muted */
     --border-color: #d1d5db;
     --border-color-light: #e5e7eb;
-    --accent-color: #2c5f41;
-    --accent-color-rgb: 44, 95, 65;
-    --accent-hover: #1a3c28;
+    --accent-color: #121c5a;
+    --accent-color-rgb: 18, 28, 90;
+    --accent-hover: #0d1544;
     --accent-text-color: #ffffff;
     --table-tint-rgb: 223, 227, 234;
     --container-bg: color-mix(in srgb, rgb(var(--container-tint-rgb)) 22%, var(--bg-secondary));
@@ -29,7 +29,7 @@
     --info-color: #0dcaf0;
     
     /* Sidebar specifiek */
-    --sidebar-bg: linear-gradient(135deg, #2c5f41 0%, #1e4530 100%);
+    --sidebar-bg: linear-gradient(135deg, #121c5a 0%, #0d1544 100%);
     --sidebar-text: #ffffff;
     --sidebar-text-muted: rgba(255, 255, 255, 0.85);
     --sidebar-hover: rgba(255, 255, 255, 0.1);

@@ -15,6 +15,8 @@ BEGIN
         ALTER TABLE dbo.tbl_wordbee_import_rows ADD aanvraagnummer NVARCHAR(120) NULL;
     IF COL_LENGTH('dbo.tbl_wordbee_import_rows', 'status') IS NULL
         ALTER TABLE dbo.tbl_wordbee_import_rows ADD status NVARCHAR(255) NULL;
+    IF COL_LENGTH('dbo.tbl_wordbee_import_rows', 'comments') IS NULL
+        ALTER TABLE dbo.tbl_wordbee_import_rows ADD comments NVARCHAR(MAX) NULL;
     IF COL_LENGTH('dbo.tbl_wordbee_import_rows', 'brontaal') IS NULL
         ALTER TABLE dbo.tbl_wordbee_import_rows ADD brontaal NVARCHAR(80) NULL;
     IF COL_LENGTH('dbo.tbl_wordbee_import_rows', 'datum_van_ontvangst') IS NULL
@@ -44,6 +46,12 @@ BEGIN
             kenmerk = COALESCE(NULLIF(JSON_VALUE(t.manual_json, ''$."Kenmerk"''), ''''), NULLIF(JSON_VALUE(t.source_json, ''$."Kenmerk"''), ''''), NULL),
             aanvraagnummer = COALESCE(NULLIF(JSON_VALUE(t.manual_json, ''$."Aanvraagnummer"''), ''''), NULLIF(JSON_VALUE(t.source_json, ''$."Aanvraagnummer"''), ''''), NULL),
             status = COALESCE(NULLIF(JSON_VALUE(t.manual_json, ''$."Status"''), ''''), NULLIF(JSON_VALUE(t.source_json, ''$."Status"''), ''''), NULL),
+            comments = COALESCE(
+                NULLIF(JSON_VALUE(t.manual_json, ''$."Comments"''), ''''),
+                NULLIF(JSON_VALUE(t.source_json, ''$."Comments"''), ''''),
+                NULLIF(LTRIM(RTRIM(JSON_VALUE(o.source_json, ''$.comments''))), ''''),
+                NULL
+            ),
             brontaal = COALESCE(NULLIF(JSON_VALUE(t.manual_json, ''$."Brontaal"''), ''''), NULLIF(JSON_VALUE(t.source_json, ''$."Brontaal"''), ''''), NULL),
             datum_van_ontvangst = COALESCE(NULLIF(JSON_VALUE(t.manual_json, ''$."Datum van ontvangst"''), ''''), NULLIF(JSON_VALUE(t.source_json, ''$."Datum van ontvangst"''), ''''), NULL),
             deadline = COALESCE(NULLIF(JSON_VALUE(t.manual_json, ''$."Deadline"''), ''''), NULLIF(JSON_VALUE(t.source_json, ''$."Deadline"''), ''''), NULL),
@@ -59,7 +67,52 @@ BEGIN
                 NULL
             ),
             voorstel_ander_deadline = COALESCE(NULLIF(JSON_VALUE(t.manual_json, ''$."Voorstel ander deadline"''), ''''), NULLIF(JSON_VALUE(t.source_json, ''$."Voorstel ander deadline"''), ''''), NULL)
-        FROM dbo.tbl_wordbee_import_rows t;
+        FROM dbo.tbl_wordbee_import_rows t
+        OUTER APPLY (
+            SELECT TOP 1 o.source_json
+            FROM dbo.tbl_wordbee_orders_raw o
+            WHERE
+                (
+                    TRY_CONVERT(BIGINT, COALESCE(
+                        NULLIF(JSON_VALUE(t.manual_json, ''$."Aanvraagnummer"''), ''''),
+                        NULLIF(JSON_VALUE(t.source_json, ''$."Aanvraagnummer"''), ''''),
+                        t.aanvraagnummer
+                    )) IS NOT NULL
+                    AND o.project_id = TRY_CONVERT(BIGINT, COALESCE(
+                        NULLIF(JSON_VALUE(t.manual_json, ''$."Aanvraagnummer"''), ''''),
+                        NULLIF(JSON_VALUE(t.source_json, ''$."Aanvraagnummer"''), ''''),
+                        t.aanvraagnummer
+                    ))
+                )
+                OR (
+                    NULLIF(LTRIM(RTRIM(COALESCE(
+                        NULLIF(JSON_VALUE(t.manual_json, ''$."Kenmerk"''), ''''),
+                        NULLIF(JSON_VALUE(t.source_json, ''$."Kenmerk"''), ''''),
+                        t.kenmerk
+                    ))), '''') IS NOT NULL
+                    AND o.project_reference = COALESCE(
+                        NULLIF(JSON_VALUE(t.manual_json, ''$."Kenmerk"''), ''''),
+                        NULLIF(JSON_VALUE(t.source_json, ''$."Kenmerk"''), ''''),
+                        t.kenmerk
+                    )
+                )
+            ORDER BY
+                CASE
+                    WHEN TRY_CONVERT(BIGINT, COALESCE(
+                            NULLIF(JSON_VALUE(t.manual_json, ''$."Aanvraagnummer"''), ''''),
+                            NULLIF(JSON_VALUE(t.source_json, ''$."Aanvraagnummer"''), ''''),
+                            t.aanvraagnummer
+                        )) IS NOT NULL
+                         AND o.project_id = TRY_CONVERT(BIGINT, COALESCE(
+                             NULLIF(JSON_VALUE(t.manual_json, ''$."Aanvraagnummer"''), ''''),
+                             NULLIF(JSON_VALUE(t.source_json, ''$."Aanvraagnummer"''), ''''),
+                             t.aanvraagnummer
+                         )) THEN 0
+                    ELSE 1
+                END,
+                o.created_dt DESC,
+                o.order_row_id DESC
+        ) o;
     ';
 END
 GO

@@ -76,6 +76,7 @@ function createMappedRow({ project, company, person, jobs, order, resource, pick
     "Kenmerk": toStringValue(project?.reference),
     "Aanvraagnummer": toStringValue(project?.id),
     "Status": translateStatusToDutch(statusRaw),
+    "Comments": pickFirstValue(order?.comments, project?.comments),
     "Clientnaam": pickFirstValue(project?.client, company?.name),
     "Persoonsnaam": pickFirstValue(
       [toStringValue(person?.firstname), toStringValue(person?.lastname)].filter(Boolean).join(" "),

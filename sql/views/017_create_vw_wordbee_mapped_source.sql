@@ -59,6 +59,11 @@ SELECT
         WHEN st.status_norm IN ('cancelled', 'canceled') THEN N'Geannuleerd'
         ELSE COALESCE(st.status_raw, '')
     END AS [Status],
+    COALESCE(
+        NULLIF(LTRIM(RTRIM(JSON_VALUE(o.source_json, '$.comments'))), ''),
+        NULLIF(LTRIM(RTRIM(p.comments)), ''),
+        NULLIF(LTRIM(RTRIM(JSON_VALUE(p.source_json, '$.comments'))), '')
+    ) AS [Comments],
     COALESCE(NULLIF(LTRIM(RTRIM(p.source_locale_label)), ''), NULLIF(LTRIM(RTRIM(p.source_locale_code)), '')) AS [Brontaal],
     CASE
         WHEN dt.received_dt IS NULL THEN ''

@@ -46,6 +46,7 @@ export default function ClientTableWrapper({
   onDataChange, onAddRow, newRowDefaults = {},
   noDataMessage = "Geen data beschikbaar",
   onRowReorder,
+  rowClassName,
 }) {
   const instanceRef = useRef(null);
   const activeTableIdRef = useRef(null);
@@ -322,6 +323,7 @@ export default function ClientTableWrapper({
       onDataChange, onAddRow, newRowDefaults,
       noDataMessage,
       onRowReorder: onRowReorder || undefined,
+      rowClassName,
     };
 
     const previousTableId = activeTableIdRef.current;
@@ -357,6 +359,7 @@ export default function ClientTableWrapper({
     onDataChange, onAddRow, newRowDefaults,
     noDataMessage,
     onRowReorder,
+    rowClassName,
   ]);
 
   useEffect(() => {

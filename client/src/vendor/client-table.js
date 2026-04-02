@@ -1255,6 +1255,16 @@ class ClientTable {
             tr.dataset.itemId = item.id || (start + index);
             const itemId = item.Id || item.id || 0;
             const rowClickAction = this.getRowClickAction();
+            const customRowClassName = typeof this.config.rowClassName === 'function'
+                ? this.config.rowClassName(item, start + index)
+                : '';
+
+            if (customRowClassName) {
+                String(customRowClassName)
+                    .split(/\s+/)
+                    .filter(Boolean)
+                    .forEach((className) => tr.classList.add(className));
+            }
 
             if (rowClickAction) {
                 tr.classList.add('row-clickable');

@@ -21,6 +21,7 @@ SELECT
     kenmerk,
     aanvraagnummer,
     status,
+    comments,
     brontaal,
     datum_van_ontvangst,
     deadline,
