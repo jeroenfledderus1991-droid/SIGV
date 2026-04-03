@@ -29,6 +29,9 @@ function registerAuthRoutes({
   failedLoginAudit,
   supportAdminAllowlist,
 }) {
+  const MICROSOFT_LOGIN_REQUIRED_MESSAGE =
+    "Dit account logt in via Microsoft. Gebruik 'Inloggen met Microsoft'.";
+
   function requireLocalAuthEnabled(req, res, next) {
     if (!hasLocalAuth) {
       return res.status(501).json({ error: "Lokale login is uitgeschakeld." });
@@ -58,6 +61,15 @@ function registerAuthRoutes({
         metadata: metadata && typeof metadata === "object" ? metadata : null,
       });
     } catch {}
+  }
+  async function getAllowlistedSupportAdmin(email) {
+    if (!hasMicrosoftAuth || !email) return null;
+    try {
+      return await supportAdminAllowlist?.getAllowlistEntryByEmail?.(email);
+    } catch (error) {
+      console.warn("[auth] Could not read support admin allowlist:", error?.message || error);
+      return null;
+    }
   }
   app.get("/api/auth/microsoft/start", async (req, res) => {
     if (!(await ensureDbConfigured(res))) return;
@@ -220,6 +232,18 @@ function registerAuthRoutes({
         WHERE LOWER(u.email) = LOWER(@identifier)
       `);
       const user = result.recordset[0];
+      const allowlistedSupportAdmin = await getAllowlistedSupportAdmin(identifier);
+
+      if (allowlistedSupportAdmin) {
+        await logCentralFailedLogin(req, {
+          provider: "local",
+          identifier,
+          failureReason: "microsoft_login_required",
+          statusCode: 403,
+        });
+        return res.status(403).json({ error: MICROSOFT_LOGIN_REQUIRED_MESSAGE });
+      }
+
       if (!user || !auth.verifyScryptHash(password, user.password_hash)) {
         await logCentralFailedLogin(req, {
           provider: "local",
@@ -311,6 +335,17 @@ function registerAuthRoutes({
       return res.status(400).json({ error: "Vul alle verplichte velden in." });
     }
     try {
+      const allowlistedSupportAdmin = await getAllowlistedSupportAdmin(email);
+      if (allowlistedSupportAdmin) {
+        await logCentralFailedLogin(req, {
+          provider: "register",
+          identifier: `register:${email.toLowerCase() || username.toLowerCase()}`,
+          failureReason: "microsoft_login_required",
+          statusCode: 403,
+        });
+        return res.status(403).json({ error: MICROSOFT_LOGIN_REQUIRED_MESSAGE });
+      }
+
       const pool = await db.getPool();
       const rateWindowMinutes = 15;
       const maxAttempts = 5;
